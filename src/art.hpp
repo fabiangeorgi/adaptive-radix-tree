@@ -112,15 +112,13 @@ private:
 /** This is the actual ART index that you need to implement. You will need to modify this class for this task. */
 class ART {
 private:
-    Node *root;
+    Node *root = nullptr;
     // TODO: add stuff here if needed
 
 public:
     ART();
 
     ~ART();
-
-    Node *findChildren(const Node *node, const uint8_t &partOfKey);
 
     /**
      * insert - load `value` into the tree for `key`.
@@ -129,6 +127,8 @@ public:
      * Read the task description for assumptions you can make when implementing this method.
      */
     bool insert(const Key &key, Value value);
+
+    bool recursiveInsert(Node* node, const Key &key, Value value, uint16_t depth);
 
     /**
      * lookup - search for given key k in data using the index.

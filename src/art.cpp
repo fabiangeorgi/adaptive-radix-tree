@@ -16,8 +16,33 @@ Value ART::lookup(const Key& key) {
 }
 
 bool ART::insert(const Key& key, Value value) {
-  // TODO: implement insert
-  return false;
+  return recursiveInsert(root, key, value, 0);
+}
+
+bool ART::recursiveInsert(Node *node, const Key &key, Value value, uint16_t depth) {
+    if (node == nullptr) { // empty tree
+        // add new Node 4 and set as root
+        auto node4 = new Node4(true);
+        node4->setChildren(key[depth], reinterpret_cast<Node*>(value));
+        root = node4;
+        return true;
+    }
+    // TODO: no lazy expansion till now
+    auto nextNode = node->getChildren(key[depth]);
+    if (nextNode != nullptr) {
+        return recursiveInsert(nextNode, key, value, depth+1);
+    } else {
+        if (node->isFull()) {
+            // grow()
+        }
+        // TODO does not work
+        auto node4 = new Node4(true);
+        node4->setChildren(key[depth], reinterpret_cast<Node*>(value));
+        node->setChildren(key[depth-1], node4);
+    }
+
+
+    return false;
 }
 
 // NODE 4
