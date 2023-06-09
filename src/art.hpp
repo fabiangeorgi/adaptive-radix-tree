@@ -7,6 +7,8 @@ enum class NodeType : uint8_t {
     N4 = 0, N16 = 1, N48 = 2, N256 = 3
 };
 
+constexpr uint8_t UNUSED_OFFSET_VALUE = 100;
+
 // TODOS:
 /*
  * - implement grow
@@ -51,7 +53,6 @@ public:
 
     bool isFull() override;
 
-private:
     // need uint16_t because uint8_t because we want need numberOfChildren = 256 -> would not work with uint8_t
     uint16_t numberOfChildren = 0;
     // don't need keys -> because can directly map
@@ -60,7 +61,11 @@ private:
 
 class Node48 : public Node {
 public:
-    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {}
+    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {
+        // we need some unused_offset_value -> only 0-47 allowed -> so we just use 100 to mark this field as not assigned
+        // we do that because 0 is a valid offset -> default initialization is zero
+        std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
+    }
 
     Node *getChildren(uint8_t partOfKey) override;
 
@@ -68,7 +73,8 @@ public:
 
     bool isFull() override;
 
-private:
+    Node256 *grow();
+
     uint8_t numberOfChildren = 0;
     // we do it by storing the offset in the keys
     std::array<uint8_t, 256> keys{};
@@ -85,7 +91,8 @@ public:
 
     bool isFull() override;
 
-private:
+    Node48 *grow();
+
     uint8_t numberOfChildren = 0;
     std::array<uint8_t, 16> keys{};
     std::array<Node *, 16> children{};
@@ -103,7 +110,8 @@ public:
 
     bool isFull() override;
 
-private:
+    Node16 *grow();
+
     uint8_t numberOfChildren = 0;
     std::array<uint8_t, 4> keys{};
     std::array<Node *, 4> children{};
@@ -128,7 +136,7 @@ public:
      */
     bool insert(const Key &key, Value value);
 
-    bool recursiveInsert(Node* node, const Key &key, Value value, uint16_t depth);
+    bool recursiveInsert(Node *node, const Key &key, Value value, uint16_t depth);
 
     /**
      * lookup - search for given key k in data using the index.

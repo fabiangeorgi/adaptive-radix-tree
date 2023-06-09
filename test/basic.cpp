@@ -31,6 +31,126 @@ TEST(ART, BasicKeys) {
     std::cout << "\nOr with string util function: " << str_key.as_string();
 }
 
+// NODE TESTS
+TEST(Node4, InsertValue) {
+    auto node = Node4(true);
+
+    uint64_t test = 156;
+    Key key{test};
+
+    Value value = 1;
+    auto child = reinterpret_cast<Node *>(value);
+    node.setChildren(key[0], child);
+
+    ASSERT_EQ(node.numberOfChildren, 1);
+    ASSERT_EQ(reinterpret_cast<Value>(node.children[0]), 1);
+}
+
+TEST(Node4, InsertNode) {
+    auto node = Node4(true);
+    auto parentNode = Node4(false);
+
+    uint64_t test = 156;
+    Key key{test};
+
+    Value value = 1;
+    auto child = reinterpret_cast<Node *>(value);
+    node.setChildren(key[1], child);
+    parentNode.setChildren(key[0], dynamic_cast<Node *>(&node));
+
+    ASSERT_EQ(node.numberOfChildren, 1);
+    ASSERT_EQ(node.children[0], child);
+    ASSERT_EQ(node.numberOfChildren, 1);
+    ASSERT_EQ(reinterpret_cast<Value>(node.children[0]), 1);
+}
+
+//GROW TESTS
+TEST(Node, grow) {
+    auto node4 = Node4(true);
+
+    for (uint8_t i = 0; i < 4; i++) {
+        Value value = i;
+        auto child = reinterpret_cast<Node *>(value);
+        node4.setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node4.children[i]), i);
+    }
+    ASSERT_EQ(node4.numberOfChildren, 4);
+    ASSERT_TRUE(node4.isFull());
+
+    auto node16 = node4.grow();
+    for (uint8_t i = 4; i < 16; i++) {
+        Value value = i;
+        auto child = reinterpret_cast<Node *>(value);
+
+        node16->setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node16->children[i]), i);
+    }
+    ASSERT_EQ(node16->numberOfChildren, 16);
+    ASSERT_TRUE(node16->isFull());
+
+    auto node48 = node16->grow();
+    for (uint8_t i = 16; i < 48; i++) {
+        Value value = i;
+        auto child = reinterpret_cast<Node *>(value);
+
+        node48->setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node48->children[node48->keys[i]]), i);
+    }
+    ASSERT_EQ(node48->numberOfChildren, 48);
+
+    auto node256 = node48->grow();
+    ASSERT_EQ(node256->numberOfChildren, 48);
+    for (uint8_t i = 0; i < 48; i++) {
+        ASSERT_EQ(reinterpret_cast<Value>(node256->children[i]), i);
+    }
+
+}
+
+TEST(Node, growLargerValuesAboveUnused) {
+    const int MULTIPLICATION_FACTOR = 1000;
+
+    auto node4 = Node4(true);
+
+    for (uint8_t i = 0; i < 4; i++) {
+        Value value = i * MULTIPLICATION_FACTOR;
+        auto child = reinterpret_cast<Node *>(value);
+        node4.setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node4.children[i]), i * MULTIPLICATION_FACTOR);
+    }
+    ASSERT_EQ(node4.numberOfChildren, 4);
+    ASSERT_TRUE(node4.isFull());
+
+
+    auto node16 = node4.grow();
+    for (uint8_t i = 4; i < 16; i++) {
+        Value value = i * MULTIPLICATION_FACTOR;
+        auto child = reinterpret_cast<Node *>(value);
+
+        node16->setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node16->children[i]), i * MULTIPLICATION_FACTOR);
+    }
+    ASSERT_EQ(node16->numberOfChildren, 16);
+    ASSERT_TRUE(node16->isFull());
+
+    auto node48 = node16->grow();
+    for (uint8_t i = 16; i < 48; i++) {
+        Value value = i * MULTIPLICATION_FACTOR;
+        auto child = reinterpret_cast<Node *>(value);
+
+        node48->setChildren(i, child);
+        ASSERT_EQ(reinterpret_cast<Value>(node48->children[node48->keys[i]]), i * MULTIPLICATION_FACTOR);
+    }
+    ASSERT_EQ(node48->numberOfChildren, 48);
+
+    auto node256 = node48->grow();
+    ASSERT_EQ(node256->numberOfChildren, 48);
+    for (uint8_t i = 0; i < 48; i++) {
+        ASSERT_EQ(reinterpret_cast<Value>(node256->children[i]), i * MULTIPLICATION_FACTOR);
+    }
+
+}
+
+// TREE TESTS
 TEST(ART, InsertKey) {
     ART index{};
     uint64_t test = 156;
