@@ -19,6 +19,7 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
     if (node == nullptr) {
         return INVALID_VALUE;
     }
+    for (; depth < key.key_len - 1 && node->key[depth] == key[depth]; depth += 1);
     if (node->isLeafNode) {
         Node *value = node->getChildren(key[key.key_len - 1], dummy);
         if (value == nullptr) {
@@ -239,6 +240,8 @@ Node256 *Node48::grow() {
         auto index = this->keys[i];
         if (index != UNUSED_OFFSET_VALUE) {
             node256->children[i] = this->children[index];
+        } else {
+            node256->children[i] = nullptr;
         }
     }
 

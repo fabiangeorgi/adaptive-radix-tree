@@ -216,121 +216,117 @@ TEST(ART, GrowingNodesToNode256) {
     }
 }
 
-//TEST(ART, ManyInsertions1) {
-//    int numberOfInputs = 500;
-//    ART index{};
-//    std::array<uint64_t, 500> keys{};
-//
-//    for (uint64_t i = 0; i < numberOfInputs; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//
-//    for (uint64_t i = 1; i <= numberOfInputs; i++) {
-//        Key lookup_key{i};
-//        EXPECT_EQ(index.lookup(lookup_key), i-1);
-//    }
-//}
-//
-//// TODO something here fails
-//TEST(ART, ManyInsertions256) {
-//    int numberOfInputs = 256;
-//    ART index{};
-//    std::array<uint64_t, 256> keys{};
-//
-//    for (uint64_t i = 0; i < numberOfInputs; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//
-//    Key lookup_key{256};
-//    EXPECT_EQ(index.lookup(lookup_key), 255);
-//
-////    for (uint64_t i = 1; i <= numberOfInputs; i++) {
-////        Key lookup_key{i};
-////        EXPECT_EQ(index.lookup(lookup_key), i-1);
-////    }
-//}
-//
-//TEST(ART, ManyInsertions2) {
-//    int numberOfInputs = 1000;
-//    ART index{};
-//    std::array<uint64_t, 1000> keys{};
-//
-//    for (uint64_t i = 0; i < numberOfInputs; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//
-//    // at 768 it fails
-//    for (uint64_t i = 1; i <= numberOfInputs; i++) {
-//        Key lookup_key{i};
-//        EXPECT_EQ(index.lookup(lookup_key), i-1);
-//    }
-//}
-//
-//TEST(ART, ManyInsertions3) {
-//    ART index{};
-//    std::array<uint64_t, 10000> keys{};
-//
-//    for (uint64_t i = 0; i < 10000; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//}
-//
-//TEST(ART, ManyInsertions4) {
-//    ART index{};
-//    std::array<uint64_t, 100000> keys{};
-//
-//    for (uint64_t i = 0; i < 100000; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//}
-//
-//TEST(ART, ManyInsertions5) {
-//    ART index{};
-//    std::array<uint64_t, 1000000> keys{};
-//
-//    for (uint64_t i = 0; i < 1000000; i++) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//
-//    for (uint64_t i = 1; i <= 1000000; i++) {
-//        Key lookup_key{i};
-//        EXPECT_EQ(index.lookup(lookup_key), i-1);
-//    }
-//}
-//
-////TEST(ART, ManyInsertions7) {
-////    ART index{};
-////    std::array<uint64_t, 1050000> keys{};
-////
-////    for (uint64_t i = 0; i < 1050000; i++) {
-////        keys[i] = i + 1;
-////        Key key{keys[i]};
-////        ASSERT_TRUE(index.insert(key, i));
-////    }
-////}
-////
-////TEST(ART, ManyInsertions6) {
-////    ART index{};
-////    std::array<uint64_t, 10000000> keys{};
-////
-////    for (uint64_t i = 0; i < 10000000; i++) {
-////        keys[i] = i + 1;
-////        Key key{keys[i]};
-////        ASSERT_TRUE(index.insert(key, i));
-////    }
-////}
+TEST(ART, ManyInsertions1) {
+    int numberOfInputs = 500;
+    ART index{};
+    std::array<uint64_t, 500> keys{};
+
+    for (uint64_t i = 0; i < numberOfInputs; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= numberOfInputs; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i-1);
+    }
+}
+
+// TODO something here fails
+TEST(ART, ManyInsertions256) {
+    int numberOfInputs = 255;
+    ART index{};
+    std::array<uint64_t, 255> keys{};
+
+    for (uint64_t i = 0; i < numberOfInputs; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+    Key key{256};
+    ASSERT_TRUE(index.insert(key, 255));
+
+    Key lookup_key{256};
+    EXPECT_EQ(index.lookup(lookup_key), 255);
+}
+
+TEST(ART, ManyInsertions2) {
+    int numberOfInputs = 1000;
+    ART index{};
+    std::array<uint64_t, 1000> keys{};
+
+    for (uint64_t i = 0; i < numberOfInputs; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= numberOfInputs; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i-1);
+    }
+}
+
+TEST(ART, ManyInsertions3) {
+    ART index{};
+    std::array<uint64_t, 10000> keys{};
+
+    for (uint64_t i = 0; i < 10000; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+}
+
+TEST(ART, ManyInsertions4) {
+    ART index{};
+    std::array<uint64_t, 100000> keys{};
+
+    for (uint64_t i = 0; i < 100000; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+}
+
+TEST(ART, ManyInsertions5) {
+    ART index{};
+    std::array<uint64_t, 1000000> keys{};
+
+    for (uint64_t i = 0; i < 1000000; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= 1000000; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i-1);
+    }
+}
+
+TEST(ART, ManyInsertions7) {
+    ART index{};
+    std::array<uint64_t, 1050000> keys{};
+
+    for (uint64_t i = 0; i < 1050000; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+}
+
+TEST(ART, ManyInsertions6) {
+    ART index{};
+    std::array<uint64_t, 10000000> keys{};
+
+    for (uint64_t i = 0; i < 10000000; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+}
 
 TEST(ART, InsertAndLookup) {
     ART index{};
