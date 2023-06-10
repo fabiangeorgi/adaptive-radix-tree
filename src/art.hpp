@@ -9,13 +9,6 @@ enum class NodeType : uint8_t {
 
 constexpr uint8_t UNUSED_OFFSET_VALUE = 100;
 
-// TODOS:
-/*
- * - implement grow
- * - check if need to fill keys with error value for NODE 48
- * - check if need to fill children with nullptr -> otherwise might be undefined behaviour
- */
-
 /** This is the basic node class. You are free to implement the nodes in any way you see fit. We do not require
  * anything from your implementation except the public "type".
  **/
@@ -24,9 +17,6 @@ class Node {
 public:
     // Do not change this variable. You may alter all other code in this class.
     const NodeType type;
-
-    // we just store the whole key because we need to handle lazy expansion
-    Key key;
 
     /* we use "Multi-value leaves"
      * that means we don't have additional leaf layers, but rather store the values directly in
@@ -37,26 +27,26 @@ public:
 
     uint16_t numberOfChildren = 0;
 
-    uint8_t lastChildIndex = 0;
+    uint8_t lastIndexOfChildAccessed = 0;
 
-    explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key{key}, isLeafNode(isLeaf) {}
+    explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
 
     virtual ~Node() = default;
 
-    virtual Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) = 0;
+    virtual Node *getChildren(uint8_t partOfKey) = 0;
 
-    virtual void setChildren(uint8_t partOfKey, Node *child) = 0;
+    virtual void addChildren(uint8_t partOfKey, Node *child) = 0;
 
     virtual bool isFull() = 0;
 };
 
 class Node256 : public Node {
 public:
-    explicit Node256(Key key, bool isLeafNode) : Node(NodeType::N256, key, isLeafNode) {}
+    explicit Node256(bool isLeafNode) : Node(NodeType::N256, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
+    Node *getChildren(uint8_t partOfKey) override;
 
-    void setChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -66,15 +56,15 @@ public:
 
 class Node48 : public Node {
 public:
-    explicit Node48(Key key, bool isLeafNode) : Node(NodeType::N48, key, isLeafNode) {
+    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {
         // we need some unused_offset_value -> only 0-47 allowed -> so we just use 100 to mark this field as not assigned
         // we do that because 0 is a valid offset -> default initialization is zero
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
     }
 
-    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
+    Node *getChildren(uint8_t partOfKey) override;
 
-    void setChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -87,11 +77,11 @@ public:
 
 class Node16 : public Node {
 public:
-    explicit Node16(Key key, bool isLeafNode) : Node(NodeType::N16, key, isLeafNode) {}
+    explicit Node16(bool isLeafNode) : Node(NodeType::N16, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
+    Node *getChildren(uint8_t partOfKey) override;
 
-    void setChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -104,12 +94,11 @@ public:
 
 class Node4 : public Node {
 public:
-    explicit Node4(Key key, bool isLeafNode) : Node(NodeType::N4, key, isLeafNode) {}
+    explicit Node4(bool isLeafNode) : Node(NodeType::N4, isLeafNode) {}
 
-    /* for inner node */
-    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
+    Node *getChildren(uint8_t partOfKey) override;
 
-    void setChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -122,9 +111,8 @@ public:
 /** This is the actual ART index that you need to implement. You will need to modify this class for this task. */
 class ART {
 private:
-    Node *root = nullptr;
+    Node *root = new Node4(false);
     // TODO: add stuff here if needed
-    uint8_t indexOfLastChildrenAccessed = 0;
 
 public:
     ART();
@@ -154,9 +142,11 @@ public:
      */
     Node *get_root() { return root; };
 
-    void replaceNode(Node *newNode, Node *parentNode);
-
     Value recursiveLookUp(Node *node, const Key &key, uint8_t depth);
 
     void growAndReplaceNode(Node *parentNode, Node *&node);
+
+    void replaceNode(Node *newNode, Node *parentNode);
+
+    void print(Node *node, size_t depth);
 };

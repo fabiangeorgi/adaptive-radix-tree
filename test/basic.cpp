@@ -36,12 +36,12 @@ TEST(Node4, InsertValue) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(key, true);
+    auto node = Node4(true);
 
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
-    node.setChildren(key[0], child);
+    node.addChildren(key[0], child);
 
     ASSERT_EQ(node.numberOfChildren, 1);
     ASSERT_EQ(reinterpret_cast<Value>(node.children[0]), 1);
@@ -51,13 +51,13 @@ TEST(Node4, InsertNode) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(key, true);
-    auto parentNode = Node4(key, false);
+    auto node = Node4(true);
+    auto parentNode = Node4(false);
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
-    node.setChildren(key[1], child);
-    parentNode.setChildren(key[0], dynamic_cast<Node *>(&node));
+    node.addChildren(key[1], child);
+    parentNode.addChildren(key[0], dynamic_cast<Node *>(&node));
 
     ASSERT_EQ(node.numberOfChildren, 1);
     ASSERT_EQ(node.children[0], child);
@@ -69,12 +69,12 @@ TEST(Node4, InsertNode) {
 TEST(Node, grow) {
     // just one random key, does not matter for this test case
     Key key{1};
-    auto node4 = Node4(key, true);
+    auto node4 = Node4(true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i;
         auto child = reinterpret_cast<Node *>(value);
-        node4.setChildren(i, child);
+        node4.addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node4.children[i]), i);
     }
     ASSERT_EQ(node4.numberOfChildren, 4);
@@ -85,7 +85,7 @@ TEST(Node, grow) {
         Value value = i;
         auto child = reinterpret_cast<Node *>(value);
 
-        node16->setChildren(i, child);
+        node16->addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node16->children[i]), i);
     }
     ASSERT_EQ(node16->numberOfChildren, 16);
@@ -96,7 +96,7 @@ TEST(Node, grow) {
         Value value = i;
         auto child = reinterpret_cast<Node *>(value);
 
-        node48->setChildren(i, child);
+        node48->addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node48->children[node48->keys[i]]), i);
     }
     ASSERT_EQ(node48->numberOfChildren, 48);
@@ -114,12 +114,12 @@ TEST(Node, growLargerValuesAboveUnused) {
 
     // just one random key, does not matter for this test case
     Key key{1};
-    auto node4 = Node4(key, true);
+    auto node4 = Node4(true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i * MULTIPLICATION_FACTOR;
         auto child = reinterpret_cast<Node *>(value);
-        node4.setChildren(i, child);
+        node4.addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node4.children[i]), i * MULTIPLICATION_FACTOR);
     }
     ASSERT_EQ(node4.numberOfChildren, 4);
@@ -131,7 +131,7 @@ TEST(Node, growLargerValuesAboveUnused) {
         Value value = i * MULTIPLICATION_FACTOR;
         auto child = reinterpret_cast<Node *>(value);
 
-        node16->setChildren(i, child);
+        node16->addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node16->children[i]), i * MULTIPLICATION_FACTOR);
     }
     ASSERT_EQ(node16->numberOfChildren, 16);
@@ -142,7 +142,7 @@ TEST(Node, growLargerValuesAboveUnused) {
         Value value = i * MULTIPLICATION_FACTOR;
         auto child = reinterpret_cast<Node *>(value);
 
-        node48->setChildren(i, child);
+        node48->addChildren(i, child);
         ASSERT_EQ(reinterpret_cast<Value>(node48->children[node48->keys[i]]), i * MULTIPLICATION_FACTOR);
     }
     ASSERT_EQ(node48->numberOfChildren, 48);

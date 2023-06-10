@@ -15,24 +15,19 @@ Value ART::lookup(const Key &key) {
 }
 
 Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
-    uint8_t dummy = 1;
     if (node == nullptr) {
         return INVALID_VALUE;
     }
-    for (; depth < key.key_len - 1 && node->key[depth] == key[depth]; depth += 1);
-    if (node->isLeafNode) {
-        Node *value = node->getChildren(key[key.key_len - 1], dummy);
-        if (value == nullptr) {
-            return INVALID_VALUE;
-        }
-        return reinterpret_cast<Value>(value);
+
+    Node *next = node->getChildren(key[depth]);
+    // check if we are at leaf position
+    if (depth == key.key_len - 1) {
+        return reinterpret_cast<Value>(next);
     }
-    Node *nextNode = node->getChildren(key[depth], dummy);
-    return recursiveLookUp(nextNode, key, depth + 1);
+    return recursiveLookUp(next, key, depth + 1);
 }
 
 bool ART::insert(const Key &key, Value value) {
-    indexOfLastChildrenAccessed = 0;
     return recursiveInsert(nullptr, root, key, value, 0);
 }
 
@@ -43,18 +38,17 @@ void ART::replaceNode(Node *newNode, Node *parentNode) {
     }
 
     if (parentNode->type == NodeType::N4) {
-        dynamic_cast<Node4 *>(parentNode)->children[indexOfLastChildrenAccessed] = newNode;
+        dynamic_cast<Node4 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
     } else if (parentNode->type == NodeType::N16) {
-        dynamic_cast<Node16 *>(parentNode)->children[indexOfLastChildrenAccessed] = newNode;
+        dynamic_cast<Node16 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
     } else if (parentNode->type == NodeType::N48) {
-        dynamic_cast<Node48 *>(parentNode)->children[indexOfLastChildrenAccessed] = newNode;
+        dynamic_cast<Node48 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
     } else if (parentNode->type == NodeType::N256) {
-        dynamic_cast<Node256 *>(parentNode)->children[indexOfLastChildrenAccessed] = newNode;
+        dynamic_cast<Node256 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
     }
 }
 
 void ART::growAndReplaceNode(Node *parentNode, Node *&node) {
-    // TODO test if this works
     if (node->type == NodeType::N4) {
         auto node4 = dynamic_cast<Node4 *>(node);
         auto node16 = node4->grow();
@@ -72,76 +66,48 @@ void ART::growAndReplaceNode(Node *parentNode, Node *&node) {
     replaceNode(node, parentNode);
 }
 
-// TODO might not even need parentNode -> remove
 bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Value value, uint8_t depth) {
-    // TODO: idea first implement lazy expansion and check if that is fast enough
-    // later do path compression -> still don't quite understand it, so just leave it out for now
-    if (node == nullptr) { // empty tree case
-        // create new node and set as root => is also leaf node
-        // this also means that we can store it directly compressed -> so we need to save the key
-        auto node4 = new Node4(key, true);
-        // we need to store the last key information -> this is identifier for this particular node
-        // we still save the whole key in the node, so we can reinterpret the path
-        node4->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
-        // set as new root
-        root = node4;
-        return true;
-    }
-
-    if (node->isLeafNode) {
-        auto const &key2 = node->key;
-        // we arbitrarily "traverse" through the tree and check that
-        // (a) the depth does not become greater than the index of the last part of the key -> depth < key.key_len - 1
-        // (b) the key to matches the existing path -> key2[depth] == key[depth]
-        for (; depth < key.key_len - 1 && key2[depth] == key[depth]; depth += 1);
-        // check if we are in the last possible layer -> we have to create a leaf node
-        if (depth == key.key_len - 1) {
-            // create new leaf node is full -> then grow
-            // insert
-            if (node->isFull()) {
-                growAndReplaceNode(parentNode, node);
-            }
-            node->setChildren(key[depth], reinterpret_cast<Node *>(value));
-        } else {
-            // there is still not the full path in the tree -> so we'll just create a new parent node
-            auto newInnerNode4 = new Node4(key, false);
-            newInnerNode4->setChildren(node->key[depth], node);
-            auto newLeafNode4 = new Node4(key, true);
-            newLeafNode4->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
-            newInnerNode4->setChildren(key[depth], newLeafNode4);
-            replaceNode(newInnerNode4, parentNode);
-        }
-
-        return true;
-    }
-    // traverse to next children
-    auto next = node->getChildren(key[depth], indexOfLastChildrenAccessed);
-    if (next == nullptr) { // there is no next -> we have to add it here
+    auto next = node->getChildren(key[depth]);
+    if (next != nullptr) {
+        return recursiveInsert(node, next, key, value, depth + 1);
+    } else {
         if (node->isFull()) {
             growAndReplaceNode(parentNode, node);
         }
-        auto newLeafNode = new Node4(key, true);
-        newLeafNode->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
-        node->setChildren(key[depth], newLeafNode);
-        return true;
-    } else {
-        // traverse further
-        return recursiveInsert(node, next, key, value, depth + 1);
+        Node *current = node;
+        while (true) {
+            bool isLeaf = depth == key.key_len - 1;
+            Node *child;
+            if (isLeaf) {
+                child = reinterpret_cast<Node *>(value);
+            } else {
+                child = new Node4(false);
+            }
+
+            current->addChildren(key[depth], child);
+
+            if (isLeaf) {
+                return true;
+            }
+
+            depth++;
+            current = child;
+        }
     }
 }
 
 // NODE 4
-Node *Node4::getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) {
+Node *Node4::getChildren(uint8_t partOfKey) {
     for (uint8_t i = 0; i < this->keys.size(); i++) {
         if (this->keys[i] == partOfKey) {
-            indexOfLastChildrenAccessed = i;
+            this->lastIndexOfChildAccessed = i;
             return this->children[i];
         }
     }
     return nullptr;
 }
 
-void Node4::setChildren(uint8_t partOfKey, Node *child) {
+void Node4::addChildren(uint8_t partOfKey, Node *child) {
     this->keys[numberOfChildren] = partOfKey;
     this->children[numberOfChildren] = child;
     this->numberOfChildren++;
@@ -152,7 +118,7 @@ bool Node4::isFull() {
 }
 
 Node16 *Node4::grow() {
-    auto *node16 = new Node16(this->key, this->isLeafNode);
+    auto *node16 = new Node16(this->isLeafNode);
 
     node16->numberOfChildren = this->numberOfChildren;
     for (int i = 0; i < 4; i++) {
@@ -164,7 +130,7 @@ Node16 *Node4::grow() {
 }
 
 // NODE 16
-Node *Node16::getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) {
+Node *Node16::getChildren(uint8_t partOfKey) {
     auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
     // TODO don't know if there is a better way
     auto keysInNodeRegister = _mm_set_epi8(
@@ -178,14 +144,22 @@ Node *Node16::getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccesse
     auto bitfield = _mm_movemask_epi8(cmp) & mask;
 
     if (bitfield) {
-        indexOfLastChildrenAccessed = __builtin_ctz(bitfield);
-        return this->children[indexOfLastChildrenAccessed];
+        this->lastIndexOfChildAccessed = __builtin_ctz(bitfield);
+        return this->children[this->lastIndexOfChildAccessed];
     }
 
     return nullptr;
+//// TODO for testing locally
+//    for (uint8_t i = 0; i < this->keys.size(); i++) {
+//        if (this->keys[i] == partOfKey) {
+//            this->lastIndexOfChildAccessed = i;
+//            return this->children[i];
+//        }
+//    }
+//    return nullptr;
 }
 
-void Node16::setChildren(uint8_t partOfKey, Node *child) {
+void Node16::addChildren(uint8_t partOfKey, Node *child) {
     this->keys[numberOfChildren] = partOfKey;
     this->children[numberOfChildren] = child;
     this->numberOfChildren++;
@@ -196,7 +170,7 @@ bool Node16::isFull() {
 }
 
 Node48 *Node16::grow() {
-    auto *node48 = new Node48(this->key, this->isLeafNode);
+    auto *node48 = new Node48(this->isLeafNode);
 
     node48->numberOfChildren = this->numberOfChildren;
     for (uint8_t i = 0; i < 16; i++) {
@@ -211,18 +185,18 @@ Node48 *Node16::grow() {
 }
 
 // NODE 48
-Node *Node48::getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) {
+Node *Node48::getChildren(uint8_t partOfKey) {
     auto index = this->keys[partOfKey];
     // index can only be between 0 and 47 -> so if different value -> it is an error
     // might also be suitable to fill they keys before up and then just check for the ERROR_VALUE instead of this random "48"
     if (index != UNUSED_OFFSET_VALUE) {
-        indexOfLastChildrenAccessed = index;
+        this->lastIndexOfChildAccessed = index;
         return this->children[index];
     }
     return nullptr;
 }
 
-void Node48::setChildren(uint8_t partOfKey, Node *child) {
+void Node48::addChildren(uint8_t partOfKey, Node *child) {
     this->children[numberOfChildren] = child;
     this->keys[partOfKey] = numberOfChildren;
     this->numberOfChildren++;
@@ -233,7 +207,7 @@ bool Node48::isFull() {
 }
 
 Node256 *Node48::grow() {
-    auto node256 = new Node256(this->key, this->isLeafNode);
+    auto node256 = new Node256(this->isLeafNode);
 
     node256->numberOfChildren = this->numberOfChildren;
     for (uint16_t i = 0; i < 256; i++) {
@@ -249,12 +223,12 @@ Node256 *Node48::grow() {
 }
 
 // NODE 256
-Node *Node256::getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) {
-    indexOfLastChildrenAccessed = partOfKey;
+Node *Node256::getChildren(uint8_t partOfKey) {
+    this->lastIndexOfChildAccessed = partOfKey;
     return this->children[partOfKey];
 }
 
-void Node256::setChildren(uint8_t partOfKey, Node *child) {
+void Node256::addChildren(uint8_t partOfKey, Node *child) {
     this->children[partOfKey] = child;
     this->numberOfChildren++;
 }
