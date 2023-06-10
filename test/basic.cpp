@@ -33,10 +33,11 @@ TEST(ART, BasicKeys) {
 
 // NODE TESTS
 TEST(Node4, InsertValue) {
-    auto node = Node4(true);
-
     uint64_t test = 156;
     Key key{test};
+
+    auto node = Node4(key, true);
+
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
@@ -47,11 +48,11 @@ TEST(Node4, InsertValue) {
 }
 
 TEST(Node4, InsertNode) {
-    auto node = Node4(true);
-    auto parentNode = Node4(false);
-
     uint64_t test = 156;
     Key key{test};
+
+    auto node = Node4(key, true);
+    auto parentNode = Node4(key, false);
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
@@ -66,7 +67,9 @@ TEST(Node4, InsertNode) {
 
 //GROW TESTS
 TEST(Node, grow) {
-    auto node4 = Node4(true);
+    // just one random key, does not matter for this test case
+    Key key{1};
+    auto node4 = Node4(key, true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i;
@@ -109,7 +112,9 @@ TEST(Node, grow) {
 TEST(Node, growLargerValuesAboveUnused) {
     const int MULTIPLICATION_FACTOR = 1000;
 
-    auto node4 = Node4(true);
+    // just one random key, does not matter for this test case
+    Key key{1};
+    auto node4 = Node4(key, true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i * MULTIPLICATION_FACTOR;
@@ -173,7 +178,7 @@ TEST(ART, InsertAndLookup) {
     EXPECT_EQ(index.lookup(lookup_key), 7);
 }
 
-TEST(ART, MultiInsertLoookup) {
+TEST(ART, MultiInsertLookup) {
     ART index{};
     std::array<uint64_t, 230> keys{};
 

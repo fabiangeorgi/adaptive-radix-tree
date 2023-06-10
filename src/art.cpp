@@ -11,39 +11,114 @@ ART::ART() = default;
 ART::~ART() = default;
 
 Value ART::lookup(const Key &key) {
-    // TODO: implement lookup
-    return INVALID_VALUE;
+    return recursiveLookUp(root, key, 0);
+}
+
+Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
+    if (node == nullptr) {
+        return INVALID_VALUE;
+    }
+    if (node->isLeafNode) {
+        Node *value = node->getChildren(key[key.key_len - 1]);
+        if (value == nullptr) {
+            return INVALID_VALUE;
+        }
+        return reinterpret_cast<Value>(value);
+    }
+    Node *nextNode = node->getChildren(key[depth]);
+    return recursiveLookUp(nextNode, key, depth + 1);
 }
 
 bool ART::insert(const Key &key, Value value) {
-    return recursiveInsert(root, key, value, 0);
+    return recursiveInsert(nullptr, root, key, value, 0);
 }
 
-bool ART::recursiveInsert(Node *node, const Key &key, Value value, uint16_t depth) {
-    // TODO probably will just implement the whole thing with lazy expansion because then i'll can stick to the paper
-    if (node == nullptr) { // empty tree
-        // add new Node 4 and set as root
-        auto node4 = new Node4(true);
-        node4->setChildren(key[depth], reinterpret_cast<Node *>(value));
+void ART::replaceNode(Node *newNode, Node *parentNode) {
+    if (parentNode == nullptr) { // we need to set it as root
+        root = newNode;
+        return;
+    }
+
+    if (parentNode->type == NodeType::N4) {
+        dynamic_cast<Node4 *>(parentNode)->children[0] = newNode;
+    } else if (parentNode->type == NodeType::N16) {
+        dynamic_cast<Node16 *>(parentNode)->children[0] = newNode;
+    } else if (parentNode->type == NodeType::N48) {
+        dynamic_cast<Node48 *>(parentNode)->children[0] = newNode;
+    } else {
+        dynamic_cast<Node256 *>(parentNode)->children[0] = newNode;
+    }
+}
+
+void ART::growAndReplaceNode(Node *parentNode, Node *node) {
+    // TODO test if this works
+    if (node->type == NodeType::N4) {
+        node = (Node *) dynamic_cast<Node4 *>(node)->grow();
+    } else if (node->type == NodeType::N16) {
+        node = (Node *) dynamic_cast<Node16 *>(node)->grow();
+    } else if (node->type == NodeType::N48) {
+        node = (Node *) dynamic_cast<Node48 *>(node)->grow();
+    }
+
+    replaceNode(node, parentNode);
+}
+
+// TODO might not even need parentNode -> remove
+bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Value value, uint8_t depth) {
+    // TODO: idea first implement lazy expansion and check if that is fast enough
+    // later do path compression -> still don't quite understand it, so just leave it out for now
+    if (node == nullptr) { // empty tree case
+        // create new node and set as root => is also leaf node
+        // this also means that we can store it directly compressed -> so we need to save the key
+        auto node4 = new Node4(key, true);
+        // we need to store the last key information -> this is identifier for this particular node
+        // we still save the whole key in the node, so we can reinterpret the path
+        node4->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
+        // set as new root
         root = node4;
         return true;
     }
-    // TODO: no lazy expansion till now
-    auto nextNode = node->getChildren(key[depth]);
-    if (nextNode != nullptr) {
-        return recursiveInsert(nextNode, key, value, depth + 1);
-    } else {
-        if (node->isFull()) {
-            // grow()
+
+    if (node->isLeafNode) {
+        auto const &key2 = node->key;
+        // we arbitrarily "traverse" through the tree and check that
+        // (a) the depth does not become greater than the index of the last part of the key -> depth < key.key_len - 1
+        // (b) the key to matches the existing path -> key2[depth] == key[depth]
+        for (; depth < key.key_len - 1 && key2[depth] == key[depth]; depth += 1);
+        // check if we are in the last possible layer -> we have to create a leaf node
+        if (depth == key.key_len - 1) {
+            // create new leaf node is full -> then grow
+            // insert
+            if (node->isFull()) {
+                growAndReplaceNode(parentNode, node);
+            }
+            node->setChildren(key[depth], reinterpret_cast<Node *>(value));
+        } else {
+            // there is still not the full path in the tree -> so we'll just create a new parent node
+            auto newInnerNode4 = new Node4(key, false);
+            newInnerNode4->setChildren(node->key[depth], node);
+            auto newLeafNode4 = new Node4(key, true);
+            newLeafNode4->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
+            newInnerNode4->setChildren(key[depth], newLeafNode4);
+            replaceNode(newInnerNode4, parentNode);
         }
-        // TODO does not work
-        auto node4 = new Node4(true);
-        node4->setChildren(key[depth], reinterpret_cast<Node *>(value));
-        node->setChildren(key[depth - 1], node4);
+
+        return true;
     }
-
-
-    return false;
+    // traverse to next children
+    auto next = node->getChildren(key[depth]);
+    if (next == nullptr) { // there is no next -> we have to add it here
+        if (node->isFull()) {
+            growAndReplaceNode(parentNode, node);
+        }
+        auto newLeafNode = new Node4(key, true);
+        newLeafNode->setChildren(key[key.key_len - 1], reinterpret_cast<Node *>(value));
+        node->setChildren(key[depth], newLeafNode);
+        return true;
+    } else {
+        // traverse further
+        return recursiveInsert(node, next, key, value, depth + 1);
+    }
 }
 
 // NODE 4
@@ -63,11 +138,11 @@ void Node4::setChildren(uint8_t partOfKey, Node *child) {
 }
 
 bool Node4::isFull() {
-    return this->children.size() == 4;
+    return this->numberOfChildren == 4;
 }
 
 Node16 *Node4::grow() {
-    auto *node16 = new Node16(this->isLeafNode);
+    auto *node16 = new Node16(this->key, this->isLeafNode);
 
     node16->numberOfChildren = this->numberOfChildren;
     for (int i = 0; i < 4; i++) {
@@ -110,7 +185,7 @@ bool Node16::isFull() {
 }
 
 Node48 *Node16::grow() {
-    auto *node48 = new Node48(this->isLeafNode);
+    auto *node48 = new Node48(this->key, this->isLeafNode);
 
     node48->numberOfChildren = this->numberOfChildren;
     for (uint8_t i = 0; i < 16; i++) {
@@ -146,7 +221,7 @@ bool Node48::isFull() {
 }
 
 Node256 *Node48::grow() {
-    auto node256 = new Node256(this->isLeafNode);
+    auto node256 = new Node256(this->key, this->isLeafNode);
 
     node256->numberOfChildren = (uint16_t) this->numberOfChildren;
     for (uint16_t i = 0; i < 256; i++) {
