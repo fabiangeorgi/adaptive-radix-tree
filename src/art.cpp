@@ -38,13 +38,13 @@ void ART::replaceNode(Node *newNode, Node *parentNode) {
     }
 
     if (parentNode->type == NodeType::N4) {
-        dynamic_cast<Node4 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
+        dynamic_cast<Node4 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N16) {
-        dynamic_cast<Node16 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
+        dynamic_cast<Node16 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N48) {
-        dynamic_cast<Node48 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
+        dynamic_cast<Node48 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N256) {
-        dynamic_cast<Node256 *>(parentNode)->children[parentNode->lastIndexOfChildAccessed] = newNode;
+        dynamic_cast<Node256 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
     }
 }
 
@@ -100,7 +100,7 @@ bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Value va
 Node *Node4::getChildren(uint8_t partOfKey) {
     for (uint8_t i = 0; i < this->keys.size(); i++) {
         if (this->keys[i] == partOfKey) {
-            this->lastIndexOfChildAccessed = i;
+            this->indexOfChildLastAccessed = i;
             return this->children[i];
         }
     }
@@ -144,15 +144,15 @@ Node *Node16::getChildren(uint8_t partOfKey) {
     auto bitfield = _mm_movemask_epi8(cmp) & mask;
 
     if (bitfield) {
-        this->lastIndexOfChildAccessed = __builtin_ctz(bitfield);
-        return this->children[this->lastIndexOfChildAccessed];
+        this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
+        return this->children[this->indexOfChildLastAccessed];
     }
 
     return nullptr;
 //// TODO for testing locally
 //    for (uint8_t i = 0; i < this->keys.size(); i++) {
 //        if (this->keys[i] == partOfKey) {
-//            this->lastIndexOfChildAccessed = i;
+//            this->indexOfChildLastAccessed = i;
 //            return this->children[i];
 //        }
 //    }
@@ -190,7 +190,7 @@ Node *Node48::getChildren(uint8_t partOfKey) {
     // index can only be between 0 and 47 -> so if different value -> it is an error
     // might also be suitable to fill they keys before up and then just check for the ERROR_VALUE instead of this random "48"
     if (index != UNUSED_OFFSET_VALUE) {
-        this->lastIndexOfChildAccessed = index;
+        this->indexOfChildLastAccessed = index;
         return this->children[index];
     }
     return nullptr;
@@ -224,7 +224,7 @@ Node256 *Node48::grow() {
 
 // NODE 256
 Node *Node256::getChildren(uint8_t partOfKey) {
-    this->lastIndexOfChildAccessed = partOfKey;
+    this->indexOfChildLastAccessed = partOfKey;
     return this->children[partOfKey];
 }
 

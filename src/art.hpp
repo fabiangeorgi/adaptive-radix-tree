@@ -27,7 +27,7 @@ public:
 
     uint16_t numberOfChildren = 0;
 
-    uint8_t lastIndexOfChildAccessed = 0;
+    uint8_t indexOfChildLastAccessed = 0;
 
     explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
 
