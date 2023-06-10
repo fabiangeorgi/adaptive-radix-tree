@@ -35,11 +35,15 @@ public:
      */
     bool isLeafNode;
 
+    uint16_t numberOfChildren = 0;
+
+    uint8_t lastChildIndex = 0;
+
     explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key{key}, isLeafNode(isLeaf) {}
 
     virtual ~Node() = default;
 
-    virtual Node *getChildren(uint8_t partOfKey) = 0;
+    virtual Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) = 0;
 
     virtual void setChildren(uint8_t partOfKey, Node *child) = 0;
 
@@ -50,14 +54,12 @@ class Node256 : public Node {
 public:
     explicit Node256(Key key, bool isLeafNode) : Node(NodeType::N256, key, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
 
     void setChildren(uint8_t partOfKey, Node *child) override;
 
     bool isFull() override;
 
-    // need uint16_t because uint8_t because we want need numberOfChildren = 256 -> would not work with uint8_t
-    uint16_t numberOfChildren = 0;
     // don't need keys -> because can directly map
     std::array<Node *, 256> children{};
 };
@@ -70,7 +72,7 @@ public:
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
     }
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
 
     void setChildren(uint8_t partOfKey, Node *child) override;
 
@@ -78,7 +80,6 @@ public:
 
     Node256 *grow();
 
-    uint8_t numberOfChildren = 0;
     // we do it by storing the offset in the keys
     std::array<uint8_t, 256> keys{};
     std::array<Node *, 48> children{};
@@ -88,7 +89,7 @@ class Node16 : public Node {
 public:
     explicit Node16(Key key, bool isLeafNode) : Node(NodeType::N16, key, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
 
     void setChildren(uint8_t partOfKey, Node *child) override;
 
@@ -96,7 +97,6 @@ public:
 
     Node48 *grow();
 
-    uint8_t numberOfChildren = 0;
     std::array<uint8_t, 16> keys{};
     std::array<Node *, 16> children{};
 };
@@ -107,7 +107,7 @@ public:
     explicit Node4(Key key, bool isLeafNode) : Node(NodeType::N4, key, isLeafNode) {}
 
     /* for inner node */
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t partOfKey, uint8_t& indexOfLastChildrenAccessed) override;
 
     void setChildren(uint8_t partOfKey, Node *child) override;
 
@@ -115,7 +115,6 @@ public:
 
     Node16 *grow();
 
-    uint8_t numberOfChildren = 0;
     std::array<uint8_t, 4> keys{};
     std::array<Node *, 4> children{};
 };
@@ -125,6 +124,7 @@ class ART {
 private:
     Node *root = nullptr;
     // TODO: add stuff here if needed
+    uint8_t indexOfLastChildrenAccessed = 0;
 
 public:
     ART();
@@ -158,5 +158,5 @@ public:
 
     Value recursiveLookUp(Node *node, const Key &key, uint8_t depth);
 
-    void growAndReplaceNode(Node *parentNode, Node *node);
+    void growAndReplaceNode(Node *parentNode, Node *&node);
 };
