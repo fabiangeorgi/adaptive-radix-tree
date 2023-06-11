@@ -47,16 +47,6 @@ public:
         return idx;
     }
 
-    uint8_t checkPrefixSearch(const Key &key, uint8_t depth) {
-        int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
-        int idx;
-        for (idx=0; idx < max_cmp; idx++) {
-            if (this->prefix[idx+depth] != key[depth+idx])
-                return idx;
-        }
-        return idx;
-    }
-
     virtual ~Node() = default;
 
     virtual Node *getChildren(uint8_t partOfKey) = 0;

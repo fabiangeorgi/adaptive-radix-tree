@@ -29,10 +29,10 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
         }
     }
 
-    auto prefix = node->checkPrefixSearch(key, depth);
-    if (prefix != node->prefixLength) {
-        return INVALID_VALUE;
-    }
+//    auto prefix = node->checkPrefix(key, depth);
+//    if (prefix != node->prefixLength) {
+//        return INVALID_VALUE;
+//    }
 
     depth = depth + node->prefixLength;
     auto *next = node->getChildren(key[depth]);
