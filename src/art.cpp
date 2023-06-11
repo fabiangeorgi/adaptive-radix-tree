@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <iterator>
 #include "immintrin.h"
 
 // TODO: implement if needed
@@ -19,16 +20,31 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
         return INVALID_VALUE;
     }
 
-    Node *next = node->getChildren(key[depth]);
-    // check if we are at leaf position
-    if (depth == key.key_len - 1) {
-        return reinterpret_cast<Value>(next);
+    if (node->isLeafNode) {
+        // leaf matches
+        if (0 == std::memcmp(&node->key, &key, depth)) {
+            // something is not right here
+            return dynamic_cast<LeafNode*>(node)->getValue();
+        } else {
+            return INVALID_VALUE;
+        }
     }
+
+    if (node->checkPrefix(key, depth) != node->prefixLength) {
+        return INVALID_VALUE;
+    }
+
+    depth = depth + node->prefixLength;
+    auto *next = node->getChildren(key[depth]);
     return recursiveLookUp(next, key, depth + 1);
 }
 
 bool ART::insert(const Key &key, Value value) {
-    return recursiveInsert(nullptr, root, key, value, 0);
+    auto leaf = new LeafNode(key, value);
+    // we need to store the last key information -> this is identifier for this particular node
+    // we still save the whole key in the node, so we can reinterpret the path
+
+    return recursiveInsert(nullptr, root, key, leaf, 0);
 }
 
 void ART::replaceNode(Node *newNode, Node *parentNode) {
@@ -66,33 +82,52 @@ void ART::growAndReplaceNode(Node *parentNode, Node *&node) {
     replaceNode(node, parentNode);
 }
 
-bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Value value, uint8_t depth) {
-    auto next = node->getChildren(key[depth]);
+bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *leaf, uint8_t depth) {
+    if (node == nullptr) { // handle empty tree case
+        // set as new root
+        root = leaf;
+        return true;
+    }
+
+    if (node->isLeafNode) {
+        auto newNode = new Node4(key, false);
+        auto const &key2 = node->key;
+
+        size_t i = depth;
+        for (; key[i] == key2[i]; i = i + 1) {
+            newNode->prefix[i - depth] = key[i];
+        }
+        newNode->prefixLength = i - depth;
+
+        depth = depth + newNode->prefixLength;
+        newNode->addChildren(key[depth], leaf);
+        newNode->addChildren(key2[depth], node);
+
+        replaceNode(newNode, parentNode);
+        return true;
+    }
+    uint8_t p = node->checkPrefix(key, depth);
+    if (p != node->prefixLength) {
+        auto newNode = new Node4(key, false);
+        newNode->addChildren(key[depth + p], leaf);
+        newNode->addChildren(node->prefix[p], node);
+        newNode->prefixLength = p;
+        std::memcpy(&newNode->prefix, &node->prefix, p);
+        node->prefixLength = node->prefixLength - (p + 1);
+        std::memmove(&node->prefix, &node->prefix + p + 1, node->prefixLength);
+        replaceNode(newNode, parentNode);
+        return true;
+    }
+    depth = depth + node->prefixLength;
+    auto *next = node->getChildren(key[depth]);
     if (next != nullptr) {
-        return recursiveInsert(node, next, key, value, depth + 1);
+        return recursiveInsert(node, next, key, leaf, depth + 1);
     } else {
         if (node->isFull()) {
             growAndReplaceNode(parentNode, node);
         }
-        Node *current = node;
-        while (true) {
-            bool isLeaf = depth == key.key_len - 1;
-            Node *child;
-            if (isLeaf) {
-                child = reinterpret_cast<Node *>(value);
-            } else {
-                child = new Node4(false);
-            }
-
-            current->addChildren(key[depth], child);
-
-            if (isLeaf) {
-                return true;
-            }
-
-            depth++;
-            current = child;
-        }
+        node->addChildren(key[depth], leaf);
+        return true;
     }
 }
 
@@ -118,9 +153,11 @@ bool Node4::isFull() {
 }
 
 Node16 *Node4::grow() {
-    auto *node16 = new Node16(this->isLeafNode);
+    auto *node16 = new Node16(this->key, this->isLeafNode);
 
     node16->numberOfChildren = this->numberOfChildren;
+    node16->prefix = this->prefix;
+    node16->prefixLength = this->prefixLength;
     for (int i = 0; i < 4; i++) {
         node16->keys[i] = this->keys[i];
         node16->children[i] = this->children[i];
@@ -149,7 +186,7 @@ Node *Node16::getChildren(uint8_t partOfKey) {
     }
 
     return nullptr;
-//// TODO for testing locally
+// TODO for testing locally
 //    for (uint8_t i = 0; i < this->keys.size(); i++) {
 //        if (this->keys[i] == partOfKey) {
 //            this->indexOfChildLastAccessed = i;
@@ -170,9 +207,11 @@ bool Node16::isFull() {
 }
 
 Node48 *Node16::grow() {
-    auto *node48 = new Node48(this->isLeafNode);
+    auto *node48 = new Node48(this->key, this->isLeafNode);
 
     node48->numberOfChildren = this->numberOfChildren;
+    node48->prefix = this->prefix;
+    node48->prefixLength = this->prefixLength;
     for (uint8_t i = 0; i < 16; i++) {
         // we have to use offsets in node48
         // save index as value at position key
@@ -207,9 +246,11 @@ bool Node48::isFull() {
 }
 
 Node256 *Node48::grow() {
-    auto node256 = new Node256(this->isLeafNode);
+    auto node256 = new Node256(this->key, this->isLeafNode);
 
     node256->numberOfChildren = this->numberOfChildren;
+    node256->prefix = this->prefix;
+    node256->prefixLength = this->prefixLength;
     for (uint16_t i = 0; i < 256; i++) {
         auto index = this->keys[i];
         if (index != UNUSED_OFFSET_VALUE) {

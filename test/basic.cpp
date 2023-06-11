@@ -36,7 +36,7 @@ TEST(Node4, InsertValue) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(true);
+    auto node = Node4(key, true);
 
 
     Value value = 1;
@@ -51,8 +51,8 @@ TEST(Node4, InsertNode) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(true);
-    auto parentNode = Node4(false);
+    auto node = Node4(key, true);
+    auto parentNode = Node4(key, false);
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
@@ -69,7 +69,7 @@ TEST(Node4, InsertNode) {
 TEST(Node, grow) {
     // just one random key, does not matter for this test case
     Key key{1};
-    auto node4 = Node4(true);
+    auto node4 = Node4(key, true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i;
@@ -114,7 +114,7 @@ TEST(Node, growLargerValuesAboveUnused) {
 
     // just one random key, does not matter for this test case
     Key key{1};
-    auto node4 = Node4(true);
+    auto node4 = Node4(key, true);
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i * MULTIPLICATION_FACTOR;
@@ -162,6 +162,19 @@ TEST(ART, InsertKey) {
     Key key{test};
 
     EXPECT_TRUE(index.insert(key, 1));
+}
+
+TEST(ART, InsertKey2) {
+    ART index{};
+    uint64_t test = 156;
+    Key key{test};
+
+    EXPECT_TRUE(index.insert(key, 1));
+
+    uint64_t test2 = 157;
+    Key key2{test2};
+
+    EXPECT_TRUE(index.insert(key2, 2));
 }
 
 // I get a segmentation fault error -> I don't know why this test does not fail then
@@ -216,10 +229,40 @@ TEST(ART, GrowingNodesToNode256) {
     }
 }
 
+TEST(ART, checkPrefix) {
+    ART index{};
+
+    uint64_t keyOneValue= 156;
+    Key keyOne{keyOneValue};
+
+    uint64_t keyTwoValue= 158;
+    Key keyTwo{keyTwoValue};
+
+    auto node = new Node4(keyOne, false);
+    EXPECT_EQ(node->checkPrefix(keyTwo, 0), 7);
+}
+
 TEST(ART, ManyInsertions1) {
     int numberOfInputs = 500;
     ART index{};
     std::array<uint64_t, 500> keys{};
+
+    for (uint64_t i = 0; i < numberOfInputs; i++) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= numberOfInputs; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i-1);
+    }
+}
+
+TEST(ART, ManyInsertionsTest) {
+    int numberOfInputs = 256;
+    ART index{};
+    std::array<uint64_t, 256> keys{};
 
     for (uint64_t i = 0; i < numberOfInputs; i++) {
         keys[i] = i + 1;

@@ -29,7 +29,27 @@ public:
 
     uint8_t indexOfChildLastAccessed = 0;
 
-    explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
+    Key key;
+
+    std::array<uint8_t, 8> prefix{};
+
+    uint8_t prefixLength = 0;
+
+    explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key(key), isLeafNode(isLeaf) {}
+
+    uint8_t checkPrefix(const Key &key, uint8_t depth) {
+        // TODO eventuell heir auch ein <
+        uint8_t i = 0;
+        for (; i < this->prefixLength;) {
+            if (this->prefix[i] == key[i]) {
+                i++;
+            } else {
+                return i;
+            }
+
+        }
+        return i;
+    }
 
     virtual ~Node() = default;
 
@@ -40,9 +60,30 @@ public:
     virtual bool isFull() = 0;
 };
 
+class LeafNode : public Node {
+public:
+    // does not use prefix or prefixlength
+    Value value;
+
+    explicit LeafNode(Key key, Value value) : Node(NodeType::N4, key, true), value(value) {}
+
+    Value getValue() const {
+        return value;
+    }
+
+    bool isLeafNode = true;
+
+    // we don't need those
+    Node *getChildren(uint8_t partOfKey) override { return nullptr; }
+
+    void addChildren(uint8_t partOfKey, Node *child) override {};
+
+    bool isFull() override { return true; };
+};
+
 class Node256 : public Node {
 public:
-    explicit Node256(bool isLeafNode) : Node(NodeType::N256, isLeafNode) {}
+    explicit Node256(Key key, bool isLeafNode) : Node(NodeType::N256, key, isLeafNode) {}
 
     Node *getChildren(uint8_t partOfKey) override;
 
@@ -56,7 +97,7 @@ public:
 
 class Node48 : public Node {
 public:
-    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {
+    explicit Node48(Key key, bool isLeafNode) : Node(NodeType::N48, key, isLeafNode) {
         // we need some unused_offset_value -> only 0-47 allowed -> so we just use 100 to mark this field as not assigned
         // we do that because 0 is a valid offset -> default initialization is zero
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
@@ -77,7 +118,7 @@ public:
 
 class Node16 : public Node {
 public:
-    explicit Node16(bool isLeafNode) : Node(NodeType::N16, isLeafNode) {}
+    explicit Node16(Key key, bool isLeafNode) : Node(NodeType::N16, key, isLeafNode) {}
 
     Node *getChildren(uint8_t partOfKey) override;
 
@@ -94,7 +135,7 @@ public:
 
 class Node4 : public Node {
 public:
-    explicit Node4(bool isLeafNode) : Node(NodeType::N4, isLeafNode) {}
+    explicit Node4(Key key, bool isLeafNode) : Node(NodeType::N4, key, isLeafNode) {}
 
     Node *getChildren(uint8_t partOfKey) override;
 
@@ -111,7 +152,7 @@ public:
 /** This is the actual ART index that you need to implement. You will need to modify this class for this task. */
 class ART {
 private:
-    Node *root = new Node4(false);
+    Node *root = nullptr;
     // TODO: add stuff here if needed
 
 public:
@@ -127,7 +168,7 @@ public:
      */
     bool insert(const Key &key, Value value);
 
-    bool recursiveInsert(Node *parentNode, Node *node, const Key &key, Value value, uint8_t depth);
+    bool recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *leaf, uint8_t depth);
 
     /**
      * lookup - search for given key k in data using the index.
