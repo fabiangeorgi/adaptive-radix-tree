@@ -161,8 +161,6 @@ public:
      */
     bool insert(const Key &key, Value value);
 
-    bool recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *leaf, uint8_t depth);
-
     /**
      * lookup - search for given key k in data using the index.
      * Returns INVALID_VALUE if the entry was not found.
@@ -175,8 +173,6 @@ public:
      * get_root - returns root node for further inspection. No need mot modify this.
      */
     Node *get_root() { return root; };
-
-    Value recursiveLookUp(Node *node, const Key &key, uint8_t depth);
 
     void growAndReplaceNode(Node *parentNode, Node *&node);
 

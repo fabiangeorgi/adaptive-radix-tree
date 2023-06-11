@@ -12,38 +12,90 @@ ART::ART() = default;
 ART::~ART() = default;
 
 Value ART::lookup(const Key &key) {
-    return recursiveLookUp(root, key, 0);
-}
+    Node *node = root;
+    uint8_t depth = 0;
 
-Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
-    if (node == nullptr) {
-        return INVALID_VALUE;
-    }
-
-    if (node->isLeafNode) {
-        // leaf matches
-        if (0 == std::memcmp(&node->key, &key, depth)) {
-            return dynamic_cast<LeafNode*>(node)->getValue();
-        } else {
+    while (true) {
+        if (node == nullptr) {
             return INVALID_VALUE;
         }
-    }
+
+        if (node->isLeafNode) {
+            // leaf matches
+            if (0 == std::memcmp(&node->key, &key, depth)) {
+                return dynamic_cast<LeafNode *>(node)->getValue();
+            } else {
+                return INVALID_VALUE;
+            }
+        }
 
 //    if (node->checkPrefix(key, depth) != node->prefixLength) {
 //        return INVALID_VALUE;
 //    }
 
-    depth = depth + node->prefixLength;
-    auto *next = node->getChildren(key[depth]);
-    return recursiveLookUp(next, key, depth + 1);
+        depth = depth + node->prefixLength + 1;
+        node = node->getChildren(key[depth - 1]);
+    }
 }
 
 bool ART::insert(const Key &key, Value value) {
-    auto* leaf = new LeafNode(key, value);
+    auto *leaf = new LeafNode(key, value);
     // we need to store the last key information -> this is identifier for this particular node
     // we still save the whole key in the node, so we can reinterpret the path
 
-    return recursiveInsert(nullptr, root, key, leaf, 0);
+    Node *parentNode = nullptr;
+    Node *node = root;
+    uint8_t depth = 0;
+
+    while (true) {
+        if (node == nullptr) { // handle empty tree case
+            // set as new root
+            root = leaf;
+            return true;
+        }
+
+        if (node->isLeafNode) {
+            auto newNode = new Node4(key, false);
+            auto const &key2 = node->key;
+
+            uint8_t i = depth;
+            for (; key[i] == key2[i]; i = i + 1) {
+                newNode->prefix[i - depth] = key[i];
+            }
+            newNode->prefixLength = i - depth;
+
+            depth = depth + newNode->prefixLength;
+            newNode->addChildren(key[depth], leaf);
+            newNode->addChildren(key2[depth], node);
+
+            replaceNode(newNode, parentNode);
+            return true;
+        }
+        if (uint8_t p = node->checkPrefix(key, depth); p != node->prefixLength) {
+            auto newNode = new Node4(key, false);
+            newNode->addChildren(key[depth + p], leaf);
+            newNode->addChildren(node->prefix[p], node);
+            newNode->prefixLength = p;
+            std::memcpy(&newNode->prefix, &node->prefix, p);
+            node->prefixLength = node->prefixLength - (p + 1);
+            std::memmove(begin(node->prefix), begin(node->prefix) + (p + 1), node->prefixLength);
+            replaceNode(newNode, parentNode);
+            return true;
+        }
+        depth = depth + node->prefixLength;
+        auto *next = node->getChildren(key[depth]);
+        if (next != nullptr) {
+            parentNode = node;
+            node = next;
+            depth++;
+        } else {
+            if (node->isFull()) {
+                growAndReplaceNode(parentNode, node);
+            }
+            node->addChildren(key[depth], leaf);
+            return true;
+        }
+    }
 }
 
 void ART::replaceNode(Node *newNode, Node *parentNode) {
@@ -79,54 +131,6 @@ void ART::growAndReplaceNode(Node *parentNode, Node *&node) {
     }
 
     replaceNode(node, parentNode);
-}
-
-bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *leaf, uint8_t depth) {
-    if (node == nullptr) { // handle empty tree case
-        // set as new root
-        root = leaf;
-        return true;
-    }
-
-    if (node->isLeafNode) {
-        auto newNode = new Node4(key, false);
-        auto const &key2 = node->key;
-
-        uint8_t i = depth;
-        for (; key[i] == key2[i]; i = i + 1) {
-            newNode->prefix[i - depth] = key[i];
-        }
-        newNode->prefixLength = i - depth;
-
-        depth = depth + newNode->prefixLength;
-        newNode->addChildren(key[depth], leaf);
-        newNode->addChildren(key2[depth], node);
-
-        replaceNode(newNode, parentNode);
-        return true;
-    }
-    if (uint8_t p = node->checkPrefix(key, depth); p != node->prefixLength) {
-        auto newNode = new Node4(key, false);
-        newNode->addChildren(key[depth + p], leaf);
-        newNode->addChildren(node->prefix[p], node);
-        newNode->prefixLength = p;
-        std::memcpy(&newNode->prefix, &node->prefix, p);
-        node->prefixLength = node->prefixLength - (p + 1);
-        std::memmove(begin(node->prefix), begin(node->prefix) + (p + 1), node->prefixLength);
-        replaceNode(newNode, parentNode);
-        return true;
-    }
-    depth = depth + node->prefixLength;
-    auto *next = node->getChildren(key[depth]);
-    if (next != nullptr) {
-        return recursiveInsert(node, next, key, leaf, depth + 1);
-    } else {
-        if (node->isFull()) {
-            growAndReplaceNode(parentNode, node);
-        }
-        node->addChildren(key[depth], leaf);
-        return true;
-    }
 }
 
 // NODE 4
