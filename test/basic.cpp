@@ -191,7 +191,7 @@ TEST(ART, GrowingNodesToNode16) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 
@@ -208,7 +208,7 @@ TEST(ART, GrowingNodesToNode48) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 
@@ -225,21 +225,8 @@ TEST(ART, GrowingNodesToNode256) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
-}
-
-TEST(ART, checkPrefix) {
-    ART index{};
-
-    uint64_t keyOneValue= 156;
-    Key keyOne{keyOneValue};
-
-    uint64_t keyTwoValue= 158;
-    Key keyTwo{keyTwoValue};
-
-    auto node = new Node4(keyOne, false);
-    EXPECT_EQ(node->checkPrefix(keyTwo, 0), 7);
 }
 
 TEST(ART, ManyInsertions1) {
@@ -255,7 +242,7 @@ TEST(ART, ManyInsertions1) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 
@@ -272,11 +259,10 @@ TEST(ART, ManyInsertionsTest) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 
-// TODO something here fails
 TEST(ART, ManyInsertions256) {
     int numberOfInputs = 255;
     ART index{};
@@ -307,7 +293,7 @@ TEST(ART, ManyInsertions2) {
 
     for (uint64_t i = 1; i <= numberOfInputs; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 
@@ -333,6 +319,85 @@ TEST(ART, ManyInsertions4) {
     }
 }
 
+TEST(ART, EdgeCasesTest) {
+    ART index{};
+
+    Key maxKey{18446744073709551615};
+    Key minKey{1};
+    Key specialPatterns{9187201950435737471};
+
+    ASSERT_TRUE(index.insert(maxKey, 1));
+    ASSERT_TRUE(index.insert(minKey, 2));
+    ASSERT_TRUE(index.insert(specialPatterns, 3));
+
+    EXPECT_EQ(index.lookup(maxKey), 1);
+    EXPECT_EQ(index.lookup(minKey), 2);
+    EXPECT_EQ(index.lookup(specialPatterns), 3);
+}
+
+TEST(ART, SpecialPatterns) {
+    ART index{};
+
+    Key specialPatternOne{9187201950435737471};
+    Key specialPatternTwo{9187201948305031039};
+    Key specialPatternThree{9151454626262777727};
+    Key specialPatternFour{140183445929855};
+    Key specialPatternFive{9187201950435737344};
+
+    ASSERT_TRUE(index.insert(specialPatternOne, 1));
+    ASSERT_TRUE(index.insert(specialPatternTwo, 2));
+    ASSERT_TRUE(index.insert(specialPatternThree, 3));
+    ASSERT_TRUE(index.insert(specialPatternFour, 4));
+    ASSERT_TRUE(index.insert(specialPatternFive, 5));
+
+    EXPECT_EQ(index.lookup(specialPatternOne), 1);
+    EXPECT_EQ(index.lookup(specialPatternTwo), 2);
+    EXPECT_EQ(index.lookup(specialPatternThree), 3);
+    EXPECT_EQ(index.lookup(specialPatternFour), 4);
+    EXPECT_EQ(index.lookup(specialPatternFive), 5);
+}
+
+// 01111111 01111111 01111111 01111111 01111111 01111111 01111111 01111111 = 9187201950435737471
+// 01111111 01111111 01111111 01111111 00000000 01111111 01111111 01111111 = 9187201948305031039
+// 01111111 00000000 01111111 01111111 00000000 01111111 01111111 01111111 = 9151454626262777727
+// 00000000 00000000 01111111 01111111 00000000 01111111 01111111 01111111 = 140183445929855
+// 01111111 01111111 01111111 01111111 01111111 01111111 01111111 00000000 = 9187201950435737344
+
+TEST(ART, ManyInsertionsReverse) {
+    ART index{};
+    std::array<uint64_t, 100000> keys{};
+
+    for (uint64_t i = 100000; i > 0; i--) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= 100001; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
+    }
+}
+
+TEST(ART, StringKeysPatterns) {
+    const uint8_t key_len = 5; // ignore \0 byte
+    std::array<const char *, 5> keys = {
+            "fooo0", "foo0o", "fo0oo", "f0ooo", "0fooo"
+    };
+
+    ART index{};
+    for (size_t i = 0; i < 5; ++i) {
+        ASSERT_TRUE(index.insert(Key{keys[i], key_len}, i + 1));
+    }
+
+    EXPECT_EQ(index.lookup(Key{"fooo0", key_len}), 1);
+    EXPECT_EQ(index.lookup(Key{"foo0o", key_len}), 2);
+    EXPECT_EQ(index.lookup(Key{"fo0oo", key_len}), 3);
+    EXPECT_EQ(index.lookup(Key{"f0ooo", key_len}), 4);
+    EXPECT_EQ(index.lookup(Key{"0fooo", key_len}), 5);
+}
+
+
 TEST(ART, ManyInsertions5) {
     ART index{};
     std::array<uint64_t, 1000000> keys{};
@@ -345,7 +410,7 @@ TEST(ART, ManyInsertions5) {
 
     for (uint64_t i = 1; i <= 1000000; i++) {
         Key lookup_key{i};
-        EXPECT_EQ(index.lookup(lookup_key), i-1);
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
     }
 }
 

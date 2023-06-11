@@ -23,7 +23,6 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
     if (node->isLeafNode) {
         // leaf matches
         if (0 == std::memcmp(&node->key, &key, depth)) {
-            // something is not right here
             return dynamic_cast<LeafNode*>(node)->getValue();
         } else {
             return INVALID_VALUE;
@@ -168,32 +167,32 @@ Node16 *Node4::grow() {
 
 // NODE 16
 Node *Node16::getChildren(uint8_t partOfKey) {
-    auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
-    // TODO don't know if there is a better way
-    auto keysInNodeRegister = _mm_set_epi8(
-            keys[15], keys[14], keys[13], keys[12],
-            keys[11], keys[10], keys[9], keys[8],
-            keys[7], keys[6], keys[5], keys[4],
-            keys[3], keys[2], keys[1], keys[0]
-    );
-    auto cmp = _mm_cmpeq_epi8(keyToSearchRegister, keysInNodeRegister);
-    auto mask = (1 << numberOfChildren) - 1;
-    auto bitfield = _mm_movemask_epi8(cmp) & mask;
-
-    if (bitfield) {
-        this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
-        return this->children[this->indexOfChildLastAccessed];
-    }
-
-    return nullptr;
-// TODO for testing locally
-//    for (uint8_t i = 0; i < this->keys.size(); i++) {
-//        if (this->keys[i] == partOfKey) {
-//            this->indexOfChildLastAccessed = i;
-//            return this->children[i];
-//        }
+//    auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
+//    // TODO don't know if there is a better way
+//    auto keysInNodeRegister = _mm_set_epi8(
+//            keys[15], keys[14], keys[13], keys[12],
+//            keys[11], keys[10], keys[9], keys[8],
+//            keys[7], keys[6], keys[5], keys[4],
+//            keys[3], keys[2], keys[1], keys[0]
+//    );
+//    auto cmp = _mm_cmpeq_epi8(keyToSearchRegister, keysInNodeRegister);
+//    auto mask = (1 << numberOfChildren) - 1;
+//    auto bitfield = _mm_movemask_epi8(cmp) & mask;
+//
+//    if (bitfield) {
+//        this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
+//        return this->children[this->indexOfChildLastAccessed];
 //    }
+//
 //    return nullptr;
+// TODO for testing locally
+    for (uint8_t i = 0; i < this->keys.size(); i++) {
+        if (this->keys[i] == partOfKey) {
+            this->indexOfChildLastAccessed = i;
+            return this->children[i];
+        }
+    }
+    return nullptr;
 }
 
 void Node16::addChildren(uint8_t partOfKey, Node *child) {
