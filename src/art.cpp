@@ -171,8 +171,13 @@ Node16 *Node4::grow() {
 // NODE 16
 Node *Node16::getChildren(uint8_t const &partOfKey) {
     auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
-    auto keysInNodeRegister = _mm_loadu_si128((__m128i *) &keys);
-
+    // TODO don't know if there is a better way
+    auto keysInNodeRegister = _mm_set_epi8(
+            keys[15], keys[14], keys[13], keys[12],
+            keys[11], keys[10], keys[9], keys[8],
+            keys[7], keys[6], keys[5], keys[4],
+            keys[3], keys[2], keys[1], keys[0]
+    );
     auto cmp = _mm_cmpeq_epi8(keyToSearchRegister, keysInNodeRegister);
     auto mask = (1 << numberOfChildren) - 1;
 
