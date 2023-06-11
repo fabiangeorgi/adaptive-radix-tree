@@ -363,21 +363,21 @@ TEST(ART, SpecialPatterns) {
 // 00000000 00000000 01111111 01111111 00000000 01111111 01111111 01111111 = 140183445929855
 // 01111111 01111111 01111111 01111111 01111111 01111111 01111111 00000000 = 9187201950435737344
 
-//TEST(ART, ManyInsertionsReverse) {
-//    ART index{};
-//    std::array<uint64_t, 100000> keys{};
-//
-//    for (uint64_t i = 100000; i > 0; i--) {
-//        keys[i] = i + 1;
-//        Key key{keys[i]};
-//        ASSERT_TRUE(index.insert(key, i));
-//    }
-//
-//    for (uint64_t i = 1; i <= 100001; i++) {
-//        Key lookup_key{i};
-//        EXPECT_EQ(index.lookup(lookup_key), i - 1);
-//    }
-//}
+TEST(ART, ManyInsertionsReverse) {
+    ART index{};
+    std::array<uint64_t, 100000> keys{};
+
+    for (uint64_t i = 100000; i > 0; i--) {
+        keys[i] = i + 1;
+        Key key{keys[i]};
+        ASSERT_TRUE(index.insert(key, i));
+    }
+
+    for (uint64_t i = 1; i <= 100001; i++) {
+        Key lookup_key{i};
+        EXPECT_EQ(index.lookup(lookup_key), i - 1);
+    }
+}
 
 TEST(ART, StringKeysPatterns) {
     const uint8_t key_len = 5; // ignore \0 byte
