@@ -67,8 +67,6 @@ public:
         return value;
     }
 
-    bool isLeafNode = true;
-
     // we don't need those
     Node *getChildren(uint8_t partOfKey) override { return nullptr; }
 
