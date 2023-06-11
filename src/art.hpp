@@ -30,7 +30,6 @@ public:
 
     uint8_t indexOfChildLastAccessed = 0;
 
-
     std::array<uint8_t, 8> prefix{};
 
     uint8_t prefixLength;
@@ -39,8 +38,8 @@ public:
 
     uint8_t checkPrefix(const Key &key, uint8_t depth) {
         int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
-        int idx;
-        for (idx = 0; idx < max_cmp; idx++) {
+        int idx = 0;
+        for (; idx < max_cmp; idx++) {
             if (this->prefix[idx] != key[depth + idx])
                 return idx;
         }
