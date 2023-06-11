@@ -39,7 +39,7 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
 }
 
 bool ART::insert(const Key &key, Value value) {
-    auto leaf = new LeafNode(key, value);
+    auto* leaf = new LeafNode(key, value);
     // we need to store the last key information -> this is identifier for this particular node
     // we still save the whole key in the node, so we can reinterpret the path
 
@@ -92,7 +92,7 @@ bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *le
         auto newNode = new Node4(key, false);
         auto const &key2 = node->key;
 
-        size_t i = depth;
+        uint8_t i = depth;
         for (; key[i] == key2[i]; i = i + 1) {
             newNode->prefix[i - depth] = key[i];
         }
@@ -131,7 +131,7 @@ bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *le
 }
 
 // NODE 4
-Node *Node4::getChildren(uint8_t partOfKey) {
+Node *Node4::getChildren(uint8_t const &partOfKey) {
     for (uint8_t i = 0; i < this->keys.size(); i++) {
         if (this->keys[i] == partOfKey) {
             this->indexOfChildLastAccessed = i;
@@ -141,7 +141,7 @@ Node *Node4::getChildren(uint8_t partOfKey) {
     return nullptr;
 }
 
-void Node4::addChildren(uint8_t partOfKey, Node *child) {
+void Node4::addChildren(uint8_t const &partOfKey, Node *child) {
     this->keys[numberOfChildren] = partOfKey;
     this->children[numberOfChildren] = child;
     this->numberOfChildren++;
@@ -166,7 +166,7 @@ Node16 *Node4::grow() {
 }
 
 // NODE 16
-Node *Node16::getChildren(uint8_t partOfKey) {
+Node *Node16::getChildren(uint8_t const &partOfKey) {
     auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
     // TODO don't know if there is a better way
     auto keysInNodeRegister = _mm_set_epi8(
@@ -177,9 +177,8 @@ Node *Node16::getChildren(uint8_t partOfKey) {
     );
     auto cmp = _mm_cmpeq_epi8(keyToSearchRegister, keysInNodeRegister);
     auto mask = (1 << numberOfChildren) - 1;
-    auto bitfield = _mm_movemask_epi8(cmp) & mask;
 
-    if (bitfield) {
+    if (auto bitfield = _mm_movemask_epi8(cmp) & mask) {
         this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
         return this->children[this->indexOfChildLastAccessed];
     }
@@ -195,7 +194,7 @@ Node *Node16::getChildren(uint8_t partOfKey) {
 //    return nullptr;
 }
 
-void Node16::addChildren(uint8_t partOfKey, Node *child) {
+void Node16::addChildren(uint8_t const &partOfKey, Node *child) {
     this->keys[numberOfChildren] = partOfKey;
     this->children[numberOfChildren] = child;
     this->numberOfChildren++;
@@ -223,7 +222,7 @@ Node48 *Node16::grow() {
 }
 
 // NODE 48
-Node *Node48::getChildren(uint8_t partOfKey) {
+Node *Node48::getChildren(uint8_t const &partOfKey) {
     auto index = this->keys[partOfKey];
     // index can only be between 0 and 47 -> so if different value -> it is an error
     // might also be suitable to fill they keys before up and then just check for the ERROR_VALUE instead of this random "48"
@@ -234,7 +233,7 @@ Node *Node48::getChildren(uint8_t partOfKey) {
     return nullptr;
 }
 
-void Node48::addChildren(uint8_t partOfKey, Node *child) {
+void Node48::addChildren(uint8_t const &partOfKey, Node *child) {
     this->children[numberOfChildren] = child;
     this->keys[partOfKey] = numberOfChildren;
     this->numberOfChildren++;
@@ -263,12 +262,12 @@ Node256 *Node48::grow() {
 }
 
 // NODE 256
-Node *Node256::getChildren(uint8_t partOfKey) {
+Node *Node256::getChildren(uint8_t const &partOfKey) {
     this->indexOfChildLastAccessed = partOfKey;
     return this->children[partOfKey];
 }
 
-void Node256::addChildren(uint8_t partOfKey, Node *child) {
+void Node256::addChildren(uint8_t const &partOfKey, Node *child) {
     this->children[partOfKey] = child;
     this->numberOfChildren++;
 }

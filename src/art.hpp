@@ -18,6 +18,7 @@ public:
     // Do not change this variable. You may alter all other code in this class.
     const NodeType type;
 
+    Key key;
     /* we use "Multi-value leaves"
      * that means we don't have additional leaf layers, but rather store the values directly in
      * our children array by reinterpret_casting them to Node*
@@ -29,19 +30,18 @@ public:
 
     uint8_t indexOfChildLastAccessed = 0;
 
-    Key key;
 
     std::array<uint8_t, 8> prefix{};
 
-    uint8_t prefixLength = 0;
+    uint8_t prefixLength;
 
     explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key(key), isLeafNode(isLeaf) {}
 
     uint8_t checkPrefix(const Key &key, uint8_t depth) {
         int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
         int idx;
-        for (idx=0; idx < max_cmp; idx++) {
-            if (this->prefix[idx] != key[depth+idx])
+        for (idx = 0; idx < max_cmp; idx++) {
+            if (this->prefix[idx] != key[depth + idx])
                 return idx;
         }
         return idx;
@@ -49,9 +49,9 @@ public:
 
     virtual ~Node() = default;
 
-    virtual Node *getChildren(uint8_t partOfKey) = 0;
+    virtual Node *getChildren(uint8_t const &partOfKey) = 0;
 
-    virtual void addChildren(uint8_t partOfKey, Node *child) = 0;
+    virtual void addChildren(uint8_t const &partOfKey, Node *child) = 0;
 
     virtual bool isFull() = 0;
 };
@@ -68,9 +68,9 @@ public:
     }
 
     // we don't need those
-    Node *getChildren(uint8_t partOfKey) override { return nullptr; }
+    Node *getChildren(uint8_t const &partOfKey) override { return nullptr; }
 
-    void addChildren(uint8_t partOfKey, Node *child) override {};
+    void addChildren(uint8_t const &partOfKey, Node *child) override {};
 
     bool isFull() override { return true; };
 };
@@ -79,9 +79,9 @@ class Node256 : public Node {
 public:
     explicit Node256(Key key, bool isLeafNode) : Node(NodeType::N256, key, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t const &partOfKey) override;
 
-    void addChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t const &partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -97,9 +97,9 @@ public:
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
     }
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t const &partOfKey) override;
 
-    void addChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t const &partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -114,9 +114,9 @@ class Node16 : public Node {
 public:
     explicit Node16(Key key, bool isLeafNode) : Node(NodeType::N16, key, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t const &partOfKey) override;
 
-    void addChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t const &partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -131,9 +131,9 @@ class Node4 : public Node {
 public:
     explicit Node4(Key key, bool isLeafNode) : Node(NodeType::N4, key, isLeafNode) {}
 
-    Node *getChildren(uint8_t partOfKey) override;
+    Node *getChildren(uint8_t const &partOfKey) override;
 
-    void addChildren(uint8_t partOfKey, Node *child) override;
+    void addChildren(uint8_t const &partOfKey, Node *child) override;
 
     bool isFull() override;
 
@@ -182,6 +182,4 @@ public:
     void growAndReplaceNode(Node *parentNode, Node *&node);
 
     void replaceNode(Node *newNode, Node *parentNode);
-
-    void print(Node *node, size_t depth);
 };
