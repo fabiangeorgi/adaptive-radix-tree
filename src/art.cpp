@@ -29,10 +29,9 @@ Value ART::recursiveLookUp(Node *node, const Key &key, uint8_t depth) {
         }
     }
 
-//    auto prefix = node->checkPrefix(key, depth);
-//    if (prefix != node->prefixLength) {
-//        return INVALID_VALUE;
-//    }
+    if (node->checkPrefix(key, depth) != node->prefixLength) {
+        return INVALID_VALUE;
+    }
 
     depth = depth + node->prefixLength;
     auto *next = node->getChildren(key[depth]);
@@ -114,7 +113,7 @@ bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *le
         newNode->prefixLength = p;
         std::memcpy(&newNode->prefix, &node->prefix, p);
         node->prefixLength = node->prefixLength - (p + 1);
-        std::memmove(&node->prefix, &node->prefix + p + 1, node->prefixLength);
+        std::memmove(begin(node->prefix), begin(node->prefix) + (p + 1), node->prefixLength);
         replaceNode(newNode, parentNode);
         return true;
     }
