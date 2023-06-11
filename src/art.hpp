@@ -38,17 +38,13 @@ public:
     explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key(key), isLeafNode(isLeaf) {}
 
     uint8_t checkPrefix(const Key &key, uint8_t depth) {
-        // TODO eventuell heir auch ein <
-        uint8_t i = 0;
-        for (; i < this->prefixLength;) {
-            if (this->prefix[i] == key[i]) {
-                i++;
-            } else {
-                return i;
-            }
-
+        int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
+        int idx;
+        for (idx=0; idx < max_cmp; idx++) {
+            if (this->prefix[idx] != key[depth+idx])
+                return idx;
         }
-        return i;
+        return idx;
     }
 
     virtual ~Node() = default;
