@@ -170,13 +170,9 @@ Node16 *Node4::grow() {
 
 // NODE 16
 Node *Node16::getChildren(uint8_t const &partOfKey) {
-    auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
-    auto keysInNodeRegister = _mm_loadu_si128((__m128i *) &keys);
-
-    auto cmp = _mm_cmpeq_epi8(keyToSearchRegister, keysInNodeRegister);
-    auto mask = (1 << numberOfChildren) - 1;
-
-    if (auto bitfield = _mm_movemask_epi8(cmp) & mask) {
+    if (auto bitfield =
+            _mm_movemask_epi8(_mm_cmpeq_epi8(_mm_set1_epi8(partOfKey), _mm_loadu_si128((__m128i *) &keys))) &
+            (1 << numberOfChildren) - 1) {
         this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
         return this->children[this->indexOfChildLastAccessed];
     }
