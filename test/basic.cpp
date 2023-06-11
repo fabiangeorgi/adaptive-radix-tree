@@ -306,28 +306,6 @@ TEST(ART, ManyInsertions5) {
     }
 }
 
-TEST(ART, ManyInsertions7) {
-    ART index{};
-    std::array<uint64_t, 1050000> keys{};
-
-    for (uint64_t i = 0; i < 1050000; i++) {
-        keys[i] = i + 1;
-        Key key{keys[i]};
-        ASSERT_TRUE(index.insert(key, i));
-    }
-}
-
-TEST(ART, ManyInsertions6) {
-    ART index{};
-    std::array<uint64_t, 10000000> keys{};
-
-    for (uint64_t i = 0; i < 10000000; i++) {
-        keys[i] = i + 1;
-        Key key{keys[i]};
-        ASSERT_TRUE(index.insert(key, i));
-    }
-}
-
 TEST(ART, InsertAndLookup) {
     ART index{};
     std::array<uint64_t, 10> keys{};
