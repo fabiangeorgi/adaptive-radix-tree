@@ -169,7 +169,7 @@ public:
      *
      * Read the task description for assumptions you can make when implementing this method.
      */
-    Value lookup(const Key &kry);
+    Value lookup(const Key &key);
 
     /**
      * get_root - returns root node for further inspection. No need mot modify this.

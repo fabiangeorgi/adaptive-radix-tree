@@ -105,8 +105,7 @@ bool ART::recursiveInsert(Node *parentNode, Node *node, const Key &key, Node *le
         replaceNode(newNode, parentNode);
         return true;
     }
-    uint8_t p = node->checkPrefix(key, depth);
-    if (p != node->prefixLength) {
+    if (uint8_t p = node->checkPrefix(key, depth); p != node->prefixLength) {
         auto newNode = new Node4(key, false);
         newNode->addChildren(key[depth + p], leaf);
         newNode->addChildren(node->prefix[p], node);
