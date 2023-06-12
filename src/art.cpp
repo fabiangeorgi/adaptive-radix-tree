@@ -5,6 +5,8 @@
 #include <iterator>
 #include "immintrin.h"
 
+uint8_t Node::indexOfChildLastAccessed = 0;
+
 // TODO: implement if needed
 ART::ART() = default;
 
@@ -22,7 +24,7 @@ Value ART::lookup(const Key &key) {
 
         if (node->isLeafNode) {
             // leaf matches
-            if (0 == std::memcmp(&node->key, &key, depth)) {
+            if (0 == std::memcmp(&dynamic_cast<LeafNode*>(node)->key, &key, depth)) {
                 return dynamic_cast<LeafNode *>(node)->getValue();
             } else {
                 return INVALID_VALUE;
@@ -55,8 +57,8 @@ bool ART::insert(const Key &key, Value value) {
         }
 
         if (node->isLeafNode) {
-            auto newNode = new Node4(key, false);
-            auto const &key2 = node->key;
+            auto newNode = new Node4(false);
+            auto const &key2 = dynamic_cast<LeafNode*>(node)->key;
 
             uint8_t i = depth;
             for (; key[i] == key2[i]; i = i + 1) {
@@ -72,7 +74,7 @@ bool ART::insert(const Key &key, Value value) {
             return true;
         }
         if (uint8_t p = node->checkPrefix(key, depth); p != node->prefixLength) {
-            auto newNode = new Node4(key, false);
+            auto newNode = new Node4(false);
             newNode->addChildren(key[depth + p], leaf);
             newNode->addChildren(node->prefix[p], node);
             newNode->prefixLength = p;
@@ -105,13 +107,13 @@ void ART::replaceNode(Node *newNode, Node *parentNode) {
     }
 
     if (parentNode->type == NodeType::N4) {
-        dynamic_cast<Node4 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
+        dynamic_cast<Node4 *>(parentNode)->children[Node::indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N16) {
-        dynamic_cast<Node16 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
+        dynamic_cast<Node16 *>(parentNode)->children[Node::indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N48) {
-        dynamic_cast<Node48 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
+        dynamic_cast<Node48 *>(parentNode)->children[Node::indexOfChildLastAccessed] = newNode;
     } else if (parentNode->type == NodeType::N256) {
-        dynamic_cast<Node256 *>(parentNode)->children[parentNode->indexOfChildLastAccessed] = newNode;
+        dynamic_cast<Node256 *>(parentNode)->children[Node::indexOfChildLastAccessed] = newNode;
     }
 }
 
@@ -137,7 +139,7 @@ void ART::growAndReplaceNode(Node *parentNode, Node *&node) {
 Node *Node4::getChildren(uint8_t const &partOfKey) {
     for (uint8_t i = 0; i < this->keys.size(); i++) {
         if (this->keys[i] == partOfKey) {
-            this->indexOfChildLastAccessed = i;
+            Node::indexOfChildLastAccessed = i;
             return this->children[i];
         }
     }
@@ -155,7 +157,7 @@ bool Node4::isFull() {
 }
 
 Node16 *Node4::grow() {
-    auto *node16 = new Node16(this->key, this->isLeafNode);
+    auto *node16 = new Node16(this->isLeafNode);
 
     node16->numberOfChildren = this->numberOfChildren;
     node16->prefix = this->prefix;
@@ -182,19 +184,11 @@ Node *Node16::getChildren(uint8_t const &partOfKey) {
     auto mask = (1 << numberOfChildren) - 1;
 
     if (auto bitfield = _mm_movemask_epi8(cmp) & mask) {
-        this->indexOfChildLastAccessed = __builtin_ctz(bitfield);
-        return this->children[this->indexOfChildLastAccessed];
+        Node::indexOfChildLastAccessed = __builtin_ctz(bitfield);
+        return this->children[Node::indexOfChildLastAccessed];
     }
 
     return nullptr;
-// TODO for testing locally
-//    for (uint8_t i = 0; i < this->keys.size(); i++) {
-//        if (this->keys[i] == partOfKey) {
-//            this->indexOfChildLastAccessed = i;
-//            return this->children[i];
-//        }
-//    }
-//    return nullptr;
 }
 
 void Node16::addChildren(uint8_t const &partOfKey, Node *child) {
@@ -208,7 +202,7 @@ bool Node16::isFull() {
 }
 
 Node48 *Node16::grow() {
-    auto *node48 = new Node48(this->key, this->isLeafNode);
+    auto *node48 = new Node48(this->isLeafNode);
 
     node48->numberOfChildren = this->numberOfChildren;
     node48->prefix = this->prefix;
@@ -230,7 +224,7 @@ Node *Node48::getChildren(uint8_t const &partOfKey) {
     // index can only be between 0 and 47 -> so if different value -> it is an error
     // might also be suitable to fill they keys before up and then just check for the ERROR_VALUE instead of this random "48"
     if (index != UNUSED_OFFSET_VALUE) {
-        this->indexOfChildLastAccessed = index;
+        Node::indexOfChildLastAccessed = index;
         return this->children[index];
     }
     return nullptr;
@@ -247,7 +241,7 @@ bool Node48::isFull() {
 }
 
 Node256 *Node48::grow() {
-    auto node256 = new Node256(this->key, this->isLeafNode);
+    auto node256 = new Node256(this->isLeafNode);
 
     node256->numberOfChildren = this->numberOfChildren;
     node256->prefix = this->prefix;
@@ -266,7 +260,7 @@ Node256 *Node48::grow() {
 
 // NODE 256
 Node *Node256::getChildren(uint8_t const &partOfKey) {
-    this->indexOfChildLastAccessed = partOfKey;
+    Node::indexOfChildLastAccessed = partOfKey;
     return this->children[partOfKey];
 }
 

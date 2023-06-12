@@ -18,25 +18,19 @@ public:
     // Do not change this variable. You may alter all other code in this class.
     const NodeType type;
 
-    Key key;
-    /* we use "Multi-value leaves"
-     * that means we don't have additional leaf layers, but rather store the values directly in
-     * our children array by reinterpret_casting them to Node*
-     * we can do this because our key length is always constant, so this is more performant
-     */
     bool isLeafNode;
 
     uint16_t numberOfChildren = 0;
 
-    uint8_t indexOfChildLastAccessed = 0;
+    static uint8_t indexOfChildLastAccessed;
 
     std::array<uint8_t, 8> prefix{};
 
     uint8_t prefixLength;
 
-    explicit Node(NodeType type, Key key, bool isLeaf) : type{type}, key(key), isLeafNode(isLeaf) {}
+    explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
 
-    uint8_t checkPrefix(const Key &key, uint8_t depth) {
+    uint8_t checkPrefix(const Key &key, uint8_t const &depth) {
         int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
         int idx = 0;
         for (; idx < max_cmp; idx++) {
@@ -57,10 +51,12 @@ public:
 
 class LeafNode : public Node {
 public:
+    Key key;
+
     // does not use prefix or prefixlength
     Value value;
 
-    explicit LeafNode(Key key, Value value) : Node(NodeType::N4, key, true), value(value) {}
+    explicit LeafNode(Key key, Value value) : Node(NodeType::N4, true), key(key), value(value) {}
 
     Value getValue() const {
         return value;
@@ -76,7 +72,7 @@ public:
 
 class Node256 : public Node {
 public:
-    explicit Node256(Key key, bool isLeafNode) : Node(NodeType::N256, key, isLeafNode) {}
+    explicit Node256(bool isLeafNode) : Node(NodeType::N256, isLeafNode) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
@@ -90,7 +86,7 @@ public:
 
 class Node48 : public Node {
 public:
-    explicit Node48(Key key, bool isLeafNode) : Node(NodeType::N48, key, isLeafNode) {
+    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {
         // we need some unused_offset_value -> only 0-47 allowed -> so we just use 100 to mark this field as not assigned
         // we do that because 0 is a valid offset -> default initialization is zero
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
@@ -111,7 +107,7 @@ public:
 
 class Node16 : public Node {
 public:
-    explicit Node16(Key key, bool isLeafNode) : Node(NodeType::N16, key, isLeafNode) {}
+    explicit Node16(bool isLeafNode) : Node(NodeType::N16, isLeafNode) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
@@ -128,7 +124,7 @@ public:
 
 class Node4 : public Node {
 public:
-    explicit Node4(Key key, bool isLeafNode) : Node(NodeType::N4, key, isLeafNode) {}
+    explicit Node4(bool isLeafNode) : Node(NodeType::N4, isLeafNode) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
