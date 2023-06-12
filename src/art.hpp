@@ -7,12 +7,11 @@ enum class NodeType : uint8_t {
     N4 = 0, N16 = 1, N48 = 2, N256 = 3
 };
 
-constexpr uint8_t UNUSED_OFFSET_VALUE = 100;
+constexpr uint8_t UNUSED_OFFSET_VALUE = 255;
 
 /** This is the basic node class. You are free to implement the nodes in any way you see fit. We do not require
  * anything from your implementation except the public "type".
  **/
-// TODO: implement node types
 class Node {
 public:
     // Do not change this variable. You may alter all other code in this class.
@@ -31,7 +30,6 @@ public:
     explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
 
     uint8_t checkPrefix(const Key &key, uint8_t const &depth) {
-//        int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
         int idx = 0;
         for (; idx < this->prefixLength; idx++) {
             if (this->prefix[idx] != key[depth + idx])
@@ -63,16 +61,18 @@ public:
     }
 
     // we don't need those
-    Node *getChildren(uint8_t const &partOfKey) override { return nullptr; }
+    [[gnu::unused]] Node *getChildren(uint8_t const &partOfKey) override { return nullptr; }
 
-    void addChildren(uint8_t const &partOfKey, Node *child) override {};
+    [[gnu::unused]] void addChildren(uint8_t const &partOfKey, Node *child) override {
+        // noop
+    };
 
-    bool isFull() override { return true; };
+    [[gnu::unused]] bool isFull() override { return true; };
 };
 
 class Node256 : public Node {
 public:
-    explicit Node256(bool isLeafNode) : Node(NodeType::N256, isLeafNode) {}
+    explicit Node256() : Node(NodeType::N256, false) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
@@ -86,7 +86,7 @@ public:
 
 class Node48 : public Node {
 public:
-    explicit Node48(bool isLeafNode) : Node(NodeType::N48, isLeafNode) {
+    explicit Node48() : Node(NodeType::N48, false) {
         // we need some unused_offset_value -> only 0-47 allowed -> so we just use 100 to mark this field as not assigned
         // we do that because 0 is a valid offset -> default initialization is zero
         std::ranges::fill(keys.begin(), keys.end(), UNUSED_OFFSET_VALUE);
@@ -107,7 +107,7 @@ public:
 
 class Node16 : public Node {
 public:
-    explicit Node16(bool isLeafNode) : Node(NodeType::N16, isLeafNode) {}
+    explicit Node16() : Node(NodeType::N16, false) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
@@ -124,7 +124,7 @@ public:
 
 class Node4 : public Node {
 public:
-    explicit Node4(bool isLeafNode) : Node(NodeType::N4, isLeafNode) {}
+    explicit Node4() : Node(NodeType::N4, false) {}
 
     Node *getChildren(uint8_t const &partOfKey) override;
 
@@ -142,7 +142,6 @@ public:
 class ART {
 private:
     Node *root = nullptr;
-    // TODO: add stuff here if needed
 
 public:
     ART();

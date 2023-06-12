@@ -36,7 +36,7 @@ TEST(Node4, InsertValue) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(true);
+    auto node = Node4();
 
 
     Value value = 1;
@@ -51,8 +51,8 @@ TEST(Node4, InsertNode) {
     uint64_t test = 156;
     Key key{test};
 
-    auto node = Node4(true);
-    auto parentNode = Node4(false);
+    auto node = Node4();
+    auto parentNode = Node4();
 
     Value value = 1;
     auto child = reinterpret_cast<Node *>(value);
@@ -67,9 +67,7 @@ TEST(Node4, InsertNode) {
 
 //GROW TESTS
 TEST(Node, grow) {
-    // just one random key, does not matter for this test case
-    Key key{1};
-    auto node4 = Node4(true);
+    auto node4 = Node4();
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i;
@@ -112,9 +110,7 @@ TEST(Node, grow) {
 TEST(Node, growLargerValuesAboveUnused) {
     const int MULTIPLICATION_FACTOR = 1000;
 
-    // just one random key, does not matter for this test case
-    Key key{1};
-    auto node4 = Node4(true);
+    auto node4 = Node4();
 
     for (uint8_t i = 0; i < 4; i++) {
         Value value = i * MULTIPLICATION_FACTOR;

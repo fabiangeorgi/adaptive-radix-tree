@@ -31,9 +31,10 @@ Value ART::lookup(const Key &key) {
             }
         }
 
-//    if (node->checkPrefix(key, depth) != node->prefixLength) {
-//        return INVALID_VALUE;
-//    }
+        // the pessimistic approach does make it slower
+        //    if (node->checkPrefix(key, depth) != node->prefixLength) {
+        //        return INVALID_VALUE;
+        //    }
 
         depth = depth + node->prefixLength + 1;
         node = node->getChildren(key[depth - 1]);
@@ -57,7 +58,7 @@ bool ART::insert(const Key &key, Value value) {
         }
 
         if (node->isLeafNode) {
-            auto newNode = new Node4(false);
+            auto newNode = new Node4();
             auto const &key2 = dynamic_cast<LeafNode*>(node)->key;
 
             uint8_t i = depth;
@@ -74,7 +75,7 @@ bool ART::insert(const Key &key, Value value) {
             return true;
         }
         if (uint8_t p = node->checkPrefix(key, depth); p != node->prefixLength) {
-            auto newNode = new Node4(false);
+            auto newNode = new Node4();
             newNode->addChildren(key[depth + p], leaf);
             newNode->addChildren(node->prefix[p], node);
             newNode->prefixLength = p;
@@ -157,7 +158,7 @@ bool Node4::isFull() {
 }
 
 Node16 *Node4::grow() {
-    auto *node16 = new Node16(this->isLeafNode);
+    auto *node16 = new Node16();
 
     node16->numberOfChildren = this->numberOfChildren;
     node16->prefix = this->prefix;
@@ -173,7 +174,6 @@ Node16 *Node4::grow() {
 // NODE 16
 Node *Node16::getChildren(uint8_t const &partOfKey) {
     auto keyToSearchRegister = _mm_set1_epi8(partOfKey);
-    // TODO don't know if there is a better way
     auto keysInNodeRegister = _mm_set_epi8(
             keys[15], keys[14], keys[13], keys[12],
             keys[11], keys[10], keys[9], keys[8],
@@ -202,7 +202,7 @@ bool Node16::isFull() {
 }
 
 Node48 *Node16::grow() {
-    auto *node48 = new Node48(this->isLeafNode);
+    auto *node48 = new Node48();
 
     node48->numberOfChildren = this->numberOfChildren;
     node48->prefix = this->prefix;
@@ -241,7 +241,7 @@ bool Node48::isFull() {
 }
 
 Node256 *Node48::grow() {
-    auto node256 = new Node256(this->isLeafNode);
+    auto node256 = new Node256();
 
     node256->numberOfChildren = this->numberOfChildren;
     node256->prefix = this->prefix;
