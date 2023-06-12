@@ -31,9 +31,9 @@ public:
     explicit Node(NodeType type, bool isLeaf) : type{type}, isLeafNode(isLeaf) {}
 
     uint8_t checkPrefix(const Key &key, uint8_t const &depth) {
-        int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
+//        int max_cmp = std::min(this->prefixLength, (uint8_t) (key.key_len - depth));
         int idx = 0;
-        for (; idx < max_cmp; idx++) {
+        for (; idx < this->prefixLength; idx++) {
             if (this->prefix[idx] != key[depth + idx])
                 return idx;
         }
